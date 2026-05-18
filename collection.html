@@ -27,7 +27,7 @@
     <h1>Add a New Recipe</h1>
     <p>Choose your entry style below to capture ingredient metrics into your collection.</p>
 
-    <!-- Sub-navigation Sub-Mode Selection Buttons -->
+    <!-- Sub-navigation Mode Selection Buttons -->
     <div class="toggle-actions" style="margin-top: 24px;">
       <button id="toggle-ai" class="filter-btn active">✨ AI Parser</button>
       <button id="toggle-manual" class="filter-btn">📝 Manual Entry</button>
@@ -35,7 +35,7 @@
 
     <!-- Interface Mode 1: AI Scraper View Container -->
     <div id="ai-view" class="input-card">
-      <textarea id="recipe-input" rows="8" placeholder="Paste a recipe URL or messy raw context blocks here..."></textarea>
+      <textarea id="recipe-input" rows="8" placeholder="Paste a recipe URL or messy raw text here..."></textarea>
       <div class="actions">
         <button id="submit-btn" class="primary-btn">✨ Parse with AI</button>
       </div>
@@ -85,21 +85,11 @@
 
   <script src="js/storage.js"></script>
   <script>
-    // ⚠️ CONFIGURATION: Replace these with your actual details
-    const GITHUB_USERNAME = "jumprun4112"; 
-    const PRIVATE_REPO_NAME = "recipes-private-backend";
-    
-    // We break up the token so GitHub scanners don't automatically disable it.
-    // This token only needs "Issues: Read & Write" permission for your private backend repo.
-    const P1 = "github_pat_11A5U";
-    const P2 = "XG7A0l83w2G3C0wzC_u6nQfVf..."; // Replace with the background Submission Token value
-    const SUBMIT_TOKEN = P1 + P2;
-
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('toggle-ai').addEventListener('click', () => switchView('ai'));
         document.getElementById('toggle-manual').addEventListener('click', () => switchView('manual'));
 
-        document.getElementById('submit-btn').addEventListener('click', handleWebRecipeSubmission);
+        document.getElementById('submit-btn').addEventListener('click', handleRecipeForwarding);
         document.getElementById('manual-form').addEventListener('submit', handleManualSave);
     });
 
@@ -136,7 +126,7 @@
         document.getElementById('manual-form').reset();
     }
 
-    async function handleWebRecipeSubmission() {
+    function handleRecipeForwarding() {
         const inputField = document.getElementById('recipe-input');
         const inputData = inputField.value.trim();
 
@@ -145,32 +135,15 @@
             return;
         }
 
-        updateStatus("Submitting recipe to processing queue... Please wait.", "loading");
-
-        // Use GitHub API to silently open an issue in the private backend repo
-        const endpoint = `https://github.com{GITHUB_USERNAME}/${PRIVATE_REPO_NAME}/issues`;
+        // Standard link builder that injects her pasted text directly into a new GitHub issue draft
+        const titleText = encodeURIComponent("Web Scrape Request");
+        const bodyText = encodeURIComponent(inputData);
         
-        try {
-            const response = await fetch(endpoint, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${SUBMIT_TOKEN}`,
-                    "Accept": "application/vnd.github+json"
-                },
-                body: JSON.stringify({
-                    title: `Web Scrape Request: ${inputData.substring(0, 30)}...`,
-                    body: inputData
-                })
-            });
-
-            if (!response.ok) throw new Error("Failed to queue");
-
-            updateStatus("🚀 Recipe queued successfully! It will appear in 'Explore Community' tab in roughly 15-20 seconds.", "success");
-            inputField.value = "";
-        } catch (error) {
-            console.error(error);
-            updateStatus("Failed to submit recipe. Please check configuration settings.", "error");
-        }
+        const targetUrl = `https://github.com{titleText}&body=${bodyText}`;
+        
+        // Open the pre-filled private repository page in a new window tab instantly
+        window.open(targetUrl, '_blank');
+        inputField.value = "";
     }
 
     function updateStatus(msg, statusType) {
