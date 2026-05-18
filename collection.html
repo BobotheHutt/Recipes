@@ -5,24 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Add Recipes</title>
   <link rel="stylesheet" href="css/style.css">
-  <script src="js/themes.js"></script>
+  <script src="js/themes.js" defer></script>
 </head>
 <body>
 
-  <!-- Floating Theme Selector Layout -->
-  <div class="theme-wrapper">
-    <select id="theme-select">
-      <option value="light">☀️ Light Emerald</option>
-      <option value="dark">🌙 Dark Slate</option>
-      <option value="sepia">🍂 Cozy Sepia</option>
-    </select>
-  </div>
-
-  <!-- Standardized Main Navigation Bar -->
+  <!-- Navigation Bar -->
   <nav class="navbar">
     <a href="index.html" class="nav-link">My Collection</a>
     <a href="explore.html" class="nav-link">Explore Community</a>
     <a href="collection.html" class="nav-link active">Add Recipes</a>
+    
+    <!-- Inline Theme Selector -->
+    <select id="theme-select" style="margin-left: auto;">
+      <option value="light">☀️ Light Emerald</option>
+      <option value="dark">🌙 Dark Slate</option>
+      <option value="sepia">🍂 Cozy Sepia</option>
+    </select>
   </nav>
 
   <main class="container">
@@ -68,7 +66,7 @@
           <label>Ingredients (One item per line)</label>
           <textarea id="manual-ingredients" rows="5" placeholder="1 lb ground beef&#10;2 cups mozzarella&#10;1 pack lasagna sheets"></textarea>
         </div>
-        <div class="form-group);)">
+        <div class="form-group">
           <label>Instructions (One step per line)</label>
           <textarea id="manual-instructions" rows="5" placeholder="Brown the beef in a pan.&#10;Layer noodles and cheese inside oven tray.&#10;Bake at 375°F for 30 mins."></textarea>
         </div>
