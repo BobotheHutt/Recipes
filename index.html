@@ -16,7 +16,7 @@
     <a href="explore.html" class="nav-link">Explore Community</a>
     <a href="collection.html" class="nav-link">Add Recipes</a>
     
-    <!-- Unified Controls Selection Block Group -->
+    <!-- Inline Controls Dropdowns -->
     <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
       <!-- Profile Picker Dropdown -->
       <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer;">
@@ -237,8 +237,8 @@
             prepTime: document.getElementById('edit-time').value.trim() || 'Unspecified',
             ingredients: ingLines,
             instructions: instLines,
-            sourceUrl: originalRecipe.sourceUrl,
-            uploader: originalRecipe.uploader || 'Me'
+            sourceUrl: originalRecipe.sourceUrl, 
+            uploader: originalRecipe.uploader || 'Me' 
         };
 
         privateRecipes[activeEditingIndex] = updatedRecipe;
@@ -246,9 +246,10 @@
         renderPrivateRecipes();
         document.getElementById('edit-modal').classList.add('hidden');
 
-        if (updatedRecipe.sourceUrl && APP_CONFIG.GOOGLE_BRIDGE_URL) {
+        // Dynamically references the centralized global constant from js/config.js
+        if (updatedRecipe.sourceUrl && typeof GOOGLE_BRIDGE_URL !== 'undefined') {
             try {
-                fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
+                fetch(GOOGLE_BRIDGE_URL, {
                     method: "POST",
                     mode: "no-cors",
                     headers: { "Content-Type": "application/json" },
