@@ -3,92 +3,175 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Explore Recipes</title>
+  <title>Explore Community Recipes</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<!-- Place at the very top of body inside index, explore, and collection pages -->
-<div class="theme-wrapper">
-  <select id="theme-select">
-    <option value="light">☀️ Light Emerald</option>
-    <option value="dark">🌙 Dark Slate</option>
-    <option value="sepia">🍂 Cozy Sepia</option>
-  </select>
-</div>
 
-<script>
-  // Shared code logic to manage visual themes locally
-  const savedTheme = localStorage.getItem('site_theme') || 'light';
-  document.body.className = savedTheme !== 'light' ? `theme-${savedTheme}` : '';
-  document.getElementById('theme-select').value = savedTheme;
+  <!-- Floating Theme Selector Layout -->
+  <div class="theme-wrapper">
+    <select id="theme-select">
+      <option value="light">☀️ Light Emerald</option>
+      <option value="dark">🌙 Dark Slate</option>
+      <option value="sepia">🍂 Cozy Sepia</option>
+    </select>
+  </div>
 
-  document.getElementById('theme-select').addEventListener('change', (e) => {
-      const selection = e.target.value;
-      localStorage.setItem('site_theme', selection);
-      document.body.className = selection !== 'light' ? `theme-${selection}` : '';
-  });
-</script>
-
+  <!-- Navigation -->
   <nav class="navbar">
     <a href="index.html" class="nav-link">My Wallet</a>
     <a href="explore.html" class="nav-link active">Explore Community</a>
-    <a href="collection.html" class="nav-link">Add with AI</a>
+    <a href="collection.html" class="nav-link">Add Recipes</a>
   </nav>
 
   <main class="container">
     <h1>Community Recipes</h1>
     <p>Pre-parsed recipes available to everyone without using AI credits.</p>
 
+    <!-- Search and Filter Control Panel -->
+    <div class="controls-panel">
+      <input type="text" id="search-bar" placeholder="🔍 Search ingredients, titles..." autocomplete="off">
+      
+      <div class="filter-buttons">
+        <button class="filter-btn active" data-category="all">All</button>
+        <button class="filter-btn" data-category="Breakfast">Breakfast</button>
+        <button class="filter-btn" data-category="Lunch">Lunch</button>
+        <button class="filter-btn" data-category="Dinner">Dinner</button>
+        <button class="filter-btn" data-category="Dessert">Dessert</button>
+        <button class="filter-btn" data-category="Snack">Snack</button>
+      </div>
+    </div>
+
+    <!-- Grid Display -->
     <div id="global-grid" class="recipe-grid"></div>
   </main>
 
   <script src="js/storage.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-        const grid = document.getElementById('global-grid');
-        const globalRecipes = await getGlobalRecipes();
+    let allGlobalRecipes = []; // Holds the master list once downloaded
+    let currentCategory = 'all';
 
-        if (globalRecipes.length === 0) {
-            grid.innerHTML = `<p>No public recipes added yet.</p>`;
+    document.addEventListener('DOMContentLoaded', async () => {
+        allGlobalRecipes = await getGlobalRecipes(); // Pulls from js/global-recipes.json
+        
+        // Initialize layouts and system controls
+        renderCommunityRecipes();
+        setupFilterListeners();
+        setupInterfaceActions();
+        setupGlobalThemeEngine();
+    });
+
+    function renderCommunityRecipes() {
+        const grid = document.getElementById('global-grid');
+        const searchKeyword = document.getElementById('search-bar').value.toLowerCase().trim();
+        grid.innerHTML = '';
+
+        // Filter out recipes that don't fit current category and keyword strings
+        const filteredRecipes = allGlobalRecipes.filter(recipe => {
+            const matchesCategory = (currentCategory === 'all' || recipe.category === currentCategory);
+            
+            // Checks title, category, and individual array items inside ingredients
+            const matchesSearch = !searchKeyword || 
+                recipe.title.toLowerCase().includes(searchKeyword) ||
+                recipe.category.toLowerCase().includes(searchKeyword) ||
+                recipe.ingredients.some(ing => ing.toLowerCase().includes(searchKeyword));
+
+            return matchesCategory && matchesSearch;
+        });
+
+        if (filteredRecipes.length === 0) {
+            grid.innerHTML = `<p class="empty-state">No matching community recipes found.</p>`;
             return;
         }
 
-        globalRecipes.forEach((recipe, index) => {
+        // Generate the visual markup grid
+        filteredRecipes.forEach(recipe => {
             const card = document.createElement('div');
             card.className = 'recipe-card';
             card.innerHTML = `
-                <span class="badge">${recipe.category}</span>
+                <div class="card-header">
+                    <span class="badge">${recipe.category}</span>
+                    <button class="print-btn" data-title="${recipe.title}">🖨️ Print</button>
+                    <button class="save-to-local-btn" data-title="${recipe.title}">📥 Add to Wallet</button>
+                </div>
                 <h3>${recipe.title}</h3>
-                <button class="save-to-local-btn" data-index="${index}">📥 Add to My Wallet</button>
+                <p class="meta-info">⏱️ Prep: ${recipe.prepTime}</p>
                 <details>
-                    <summary>View Ingredients & Steps</summary>
+                    <summary>View Recipe Details</summary>
                     <h4>Ingredients:</h4>
                     <ul>${recipe.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
                     <h4>Instructions:</h4>
                     <ol>${recipe.instructions.map(s => `<li>${s}</li>`).join('')}</ol>
+                    ${recipe.sourceUrl ? `<a href="${recipe.sourceUrl}" target="_blank" class="source-link">Original Source ↗</a>` : ''}
                 </details>
             `;
             grid.appendChild(card);
         });
+    }
 
-        // Event listener to copy public recipes into private local storage
-        grid.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('save-to-local-btn')) {
-                const index = e.target.dataset.index;
-                const selected = globalRecipes[index];
+    function setupFilterListeners() {
+        // Handle input searching events dynamically
+        document.getElementById('search-bar').addEventListener('input', renderCommunityRecipes);
+
+        // Handle category tab clicks
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
                 
-                // Avoid double saving
-                const alreadyHasIt = getRecipes().some(r => r.title === selected.title);
-                if (alreadyHasIt) {
-                    alert("This recipe is already in your wallet!");
+                currentCategory = e.target.dataset.category;
+                renderCommunityRecipes(); // Update layout dynamically
+            });
+        });
+    }
+
+    function setupInterfaceActions() {
+        const grid = document.getElementById('global-grid');
+        
+        grid.addEventListener('click', (e) => {
+            // Handle Printing Actions
+            if (e.target.classList.contains('print-btn')) {
+                const cardElement = e.target.closest('.recipe-card');
+                const detailContainer = cardElement.querySelector('details');
+                const originalState = detailContainer.hasAttribute('open');
+                
+                // Force card open so printer can capture contents hidden inside details
+                detailContainer.setAttribute('open', '');
+                window.print();
+                
+                // Return card to original design state after printing box clears out
+                if (!originalState) detailContainer.removeAttribute('open');
+            }
+
+            // Handle Save to Wallet Actions
+            if (e.target.classList.contains('save-to-local-btn')) {
+                const targetTitle = e.target.dataset.title;
+                const recipeObject = allGlobalRecipes.find(r => r.title === targetTitle);
+                
+                // Block double inputs into user's browser storage
+                const alreadyOwned = getRecipes().some(r => r.title === targetTitle);
+                if (alreadyOwned) {
+                    alert(`"${targetTitle}" is already in your private wallet.`);
                     return;
                 }
 
-                saveRecipe(selected);
-                alert(`Saved "${selected.title}" to your private wallet!`);
+                saveRecipe(recipeObject);
+                alert(`Successfully added "${targetTitle}" to your private wallet!`);
             }
         });
-    });
+    }
+
+    function setupGlobalThemeEngine() {
+        const savedTheme = localStorage.getItem('site_theme') || 'light';
+        document.body.className = savedTheme !== 'light' ? `theme-${savedTheme}` : '';
+        document.getElementById('theme-select').value = savedTheme;
+
+        document.getElementById('theme-select').addEventListener('change', (e) => {
+            const selection = e.target.value;
+            localStorage.setItem('site_theme', selection);
+            document.body.className = selection !== 'light' ? `theme-${selection}` : '';
+        });
+    }
   </script>
 </body>
 </html>
