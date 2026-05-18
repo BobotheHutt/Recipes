@@ -151,7 +151,6 @@
             return;
         }
 
-        // Safety verification check ensuring the unified config setup mapping file exists
         if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.GOOGLE_BRIDGE_URL) {
             showAlert("Configuration file error. Missing centralized bridge access link.", "error");
             return;
@@ -183,11 +182,11 @@
             uploader: currentUploader
         };
 
-        // 1. SAVE INSTANTLY TO LOCAL COLLECTION
+        // 1. Save instantly to her device collection local cache folder
         saveRecipe(temporaryLocalBackup);
 
         try {
-            // 2. SIMULTANEOUSLY SEND TO GLOBAL BACKGROUND AUTOMATION ROUTE
+            // 2. Simultaneously send out to global background Google infrastructure
             await fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
                 method: "POST",
                 mode: "no-cors", 
@@ -198,7 +197,8 @@
                 })
             });
 
-            updateStatus("🚀 Recipe added! It has been placed in 'My Collection' temporarily and will finish parsing in 'Explore Community' in roughly 15-20 seconds.", "success");
+            // FIXED: Fixed notice text typo to read cleanly
+            updateStatus("🚀 Recipe added! It has been placed in 'My Collection' temporarily and will finish parsing into 'Explore Community' in roughly 15-20 seconds.", "success");
             inputField.value = "";
         } catch (error) {
             console.error(error);
