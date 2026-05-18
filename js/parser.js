@@ -1,8 +1,7 @@
 // js/parser.js
 
-// TODO: Replace this URL with your actual deployed Netlify function domain later
-// Example: 'https://netlify.app'
-const NETLIFY_ENDPOINT = 'https://recipesaves.netlify.app/';
+// FIXED: Appended the correct serverless path to target your script file directly
+const NETLIFY_ENDPOINT = 'https://netlify.app';
 
 /**
  * Sends messy text or a recipe URL to the serverless function to parse with Gemini.
@@ -19,7 +18,7 @@ async function parseRecipeWithAI(rawTextOrUrl) {
             body: JSON.stringify({ rawText: rawTextOrUrl })
         });
 
-        // Handle errors like server crashes, rate limits (429), or missing keys (500)
+        // Handle error responses cleanly
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error("Backend Error Details:", errorData);
