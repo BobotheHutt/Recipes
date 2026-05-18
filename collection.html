@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Add Recipes</title>
   <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Critical Block: Read and apply theme instantly before the body even renders -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('site_theme') || 'light';
+      if (savedTheme !== 'light') {
+        document.documentElement.classList.add(`theme-${savedTheme}`);
+      }
+    })();
+  </script>
 </head>
 <body>
 
@@ -232,12 +242,15 @@
 
     function setupGlobalThemeEngine() {
         const savedTheme = localStorage.getItem('site_theme') || 'light';
-        document.body.className = savedTheme !== 'light' ? `theme-${savedTheme}` : '';
-        document.getElementById('theme-select').value = savedTheme;
-        document.getElementById('theme-select').addEventListener('change', (e) => {
+        const selectEl = document.getElementById('theme-select');
+        if (selectEl) selectEl.value = savedTheme;
+        selectEl.addEventListener('change', (e) => {
             const selection = e.target.value;
             localStorage.setItem('site_theme', selection);
-            document.body.className = selection !== 'light' ? `theme-${selection}` : '';
+            document.documentElement.className = '';
+            if (selection !== 'light') {
+                document.documentElement.classList.add(`theme-${selection}`);
+            }
         });
     }
   </script>
