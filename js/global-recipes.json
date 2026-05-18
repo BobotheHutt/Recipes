@@ -1,0 +1,10 @@
+[
+  {
+    "title": "Perfect Chocolate Chip Cookies",
+    "category": "Dessert",
+    "prepTime": "25 mins",
+    "ingredients": ["1 cup butter", "1 cup sugar", "2 cups flour", "2 cups chocolate chips"],
+    "instructions": ["Cream butter and sugars.", "Mix in dry ingredients.", "Bake at 375°F for 10 mins."],
+    "sourceUrl": "https://example-cooking-site.com"
+  }
+]
