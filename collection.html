@@ -7,6 +7,27 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<!-- Place at the very top of body inside index, explore, and collection pages -->
+<div class="theme-wrapper">
+  <select id="theme-select">
+    <option value="light">☀️ Light Emerald</option>
+    <option value="dark">🌙 Dark Slate</option>
+    <option value="sepia">🍂 Cozy Sepia</option>
+  </select>
+</div>
+
+<script>
+  // Shared code logic to manage visual themes locally
+  const savedTheme = localStorage.getItem('site_theme') || 'light';
+  document.body.className = savedTheme !== 'light' ? `theme-${savedTheme}` : '';
+  document.getElementById('theme-select').value = savedTheme;
+
+  document.getElementById('theme-select').addEventListener('change', (e) => {
+      const selection = e.target.value;
+      localStorage.setItem('site_theme', selection);
+      document.body.className = selection !== 'light' ? `theme-${selection}` : '';
+  });
+</script>
 
   <!-- Navigation -->
   <nav class="navbar">
