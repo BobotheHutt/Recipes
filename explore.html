@@ -5,24 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Explore Community Recipes</title>
   <link rel="stylesheet" href="css/style.css">
-  <script src="js/themes.js"></script>
+  <script src="js/themes.js" defer></script>
 </head>
 <body>
-
-  <!-- Floating Theme Selector Layout -->
-  <div class="theme-wrapper">
-    <select id="theme-select">
-      <option value="light">☀️ Light Emerald</option>
-      <option value="dark">🌙 Dark Slate</option>
-      <option value="sepia">🍂 Cozy Sepia</option>
-    </select>
-  </div>
 
   <!-- Navigation Bar -->
   <nav class="navbar">
     <a href="index.html" class="nav-link">My Collection</a>
     <a href="explore.html" class="nav-link active">Explore Community</a>
     <a href="collection.html" class="nav-link">Add Recipes</a>
+    
+    <!-- Inline Theme Selector -->
+    <select id="theme-select" style="margin-left: auto;">
+      <option value="light">☀️ Light Emerald</option>
+      <option value="dark">🌙 Dark Slate</option>
+      <option value="sepia">🍂 Cozy Sepia</option>
+    </select>
   </nav>
 
   <main class="container">
