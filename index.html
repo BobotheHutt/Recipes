@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Recipe Wallet</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <a href="index.html" class="nav-link active">Saved Recipes</a>
+    <a href="collection.html" class="nav-link">Add with AI</a>
+  </nav>
+
+  <main class="container">
+    <h1>My Recipe Collection</h1>
+
+    <!-- Category Filters -->
+    <div class="filter-buttons">
+      <button class="filter-btn active" data-category="all">All</button>
+      <button class="filter-btn" data-category="Breakfast">Breakfast</button>
+      <button class="filter-btn" data-category="Lunch">Lunch</button>
+      <button class="filter-btn" data-category="Dinner">Dinner</button>
+      <button class="filter-btn" data-category="Dessert">Dessert</button>
+    </div>
+
+    <!-- Recipe Grid Display -->
+    <div id="recipe-grid" class="recipe-grid">
+      <!-- JavaScript will inject recipes here -->
+    </div>
+  </main>
+
+  <script src="js/storage.js"></script>
+  <script>
+    // Load and render recipes on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        renderRecipes('all');
+        setupFilters();
+    });
+
+    function renderRecipes(filter) {
+        const grid = document.getElementById('recipe-grid');
+        const recipes = getRecipes(); // From storage.js
+        grid.innerHTML = '';
+
+        const filtered = filter === 'all' ? recipes : recipes.filter(r => r.category === filter);
+
+        if (filtered.length === 0) {
+            grid.innerHTML = `<p class="empty-state">No recipes found in this category.</p>`;
+            return;
+        }
+
+        filtered.forEach(recipe => {
+            const card = document.createElement('div');
+            card.className = 'recipe-card';
+            card.innerHTML = `
+                <span class="badge">${recipe.category}</span>
+                <h3>${recipe.title}</h3>
+                <p>⏱️ ${recipe.prepTime}</p>
+                <details>
+                    <summary>View Ingredients & Steps</summary>
+                    <h4>Ingredients:</h4>
+                    <ul>${recipe.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
+                    <h4>Instructions:</h4>
+                    <ol>${recipe.instructions.map(s => `<li>${s}</li>`).join('')}</ol>
+                    ${recipe.sourceUrl ? `<a href="${recipe.sourceUrl}" target="_blank" class="source-link">Original Source</a>` : ''}
+                </details>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function setupFilters() {
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                renderRecipes(e.target.dataset.category);
+            });
+        });
+    }
+  </script>
+</body>
+</html>
