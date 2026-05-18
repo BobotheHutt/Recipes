@@ -25,208 +25,22 @@
 
   <main class="container">
     <h1>Add a New Recipe</h1>
-    <p>Choose your entry style below to capture ingredient metrics into your collection.</p>
+    <p>To securely protect your system credentials and bypass third-party server resource limits, recipe imports are managed directly via your private tracking dashboard.</p>
 
-    <!-- Sub-navigation Sub-Mode Selection Buttons -->
-    <div class="toggle-actions" style="margin-top: 24px;">
-      <button id="toggle-ai" class="filter-btn active">✨ AI Parser</button>
-      <button id="toggle-manual" class="filter-btn">📝 Manual Entry</button>
-    </div>
-
-    <!-- Interface Mode 1: AI Scraper View Container -->
-    <div id="ai-view" class="input-card">
-      <textarea id="recipe-input" rows="8" placeholder="Paste a recipe URL or messy raw context blocks here..."></textarea>
-      <div class="actions">
-        <button id="submit-btn" class="primary-btn">✨ Parse with AI</button>
-      </div>
-    </div>
-
-    <!-- Interface Mode 2: Manual Data Entry Form Block Container -->
-    <div id="manual-view" class="input-card hidden">
-      <form id="manual-form">
-        <div class="form-group">
-          <label>Recipe Title</label>
-          <input type="text" id="manual-title" placeholder="e.g., Mom's Lasagna" required>
-        </div>
-        <div class="form-group">
-          <label>Category</label>
-          <select id="manual-category">
-            <option value="Dinner">Dinner</option>
-            <option value="Breakfast">Breakfast</option>
-            <option value="Lunch">Lunch</option>
-            <option value="Dessert">Dessert</option>
-            <option value="Snack">Snack</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Preparation Time</label>
-          <input type="text" id="manual-time" placeholder="e.g., 45 mins">
-        </div>
-        <div class="form-group">
-          <label>Ingredients (One item per line)</label>
-          <textarea id="manual-ingredients" rows="5" placeholder="1 lb ground beef&#10;2 cups mozzarella&#10;1 pack lasagna sheets"></textarea>
-        </div>
-        <div class="form-group">
-          <label>Instructions (One step per line)</label>
-          <textarea id="manual-instructions" rows="5" placeholder="Brown the beef in a pan.&#10;Layer noodles and cheese inside oven tray.&#10;Bake at 375°F for 30 mins."></textarea>
-        </div>
-        <div class="form-group">
-          <label>Source Web link (Optional)</label>
-          <input type="url" id="manual-url" placeholder="https://site.com">
-        </div>
-        <div class="actions">
-          <button type="submit" class="primary-btn">💾 Save Recipe Manual</button>
-        </div>
-      </form>
-    </div>
-
-    <div id="status-message" class="status-box hidden"></div>
-
-    <!-- Smart Duplicate Interceptor Modal Window Overlay -->
-    <div id="duplicate-modal" class="modal-overlay hidden">
-      <div class="modal-content">
-        <h3>🔍 Recipe Already Saved!</h3>
-        <p id="modal-text"></p>
-        <div class="modal-actions">
-          <button id="use-existing-btn" class="secondary-btn">📦 Use Existing Copy</button>
-          <button id="force-parse-btn" class="danger-btn">⚡ Run AI Parser Anyway</button>
-          <button id="cancel-btn" class="text-btn">Cancel</button>
-        </div>
-      </div>
+    <!-- Instructional Dashboard Panel -->
+    <div class="input-card" style="margin-top: 32px; text-align: center; padding: 40px 20px;">
+      <h3 style="margin-bottom: 12px;">✨ How to Import Any Recipe</h3>
+      <p style="max-width: 600px; margin: 0 auto 24px auto; color: var(--text-muted);">
+        Simply open your private backend repository, go to the <strong>Issues</strong> tab, and click <strong>New Issue</strong>. 
+        Paste the recipe URL or messy cooking text right into the main comment box and click submit. 
+        The background automation script takes care of the rest!
+      </p>
+      
+      <!-- Button links straight to your private backend repo issues dashboard -->
+      <a href="https://github.com" target="_blank" style="display: inline-block; background: var(--primary); color: white; text-decoration: none; padding: 14px 28px; font-weight: 600; border-radius: 8px; transition: background 0.15s ease;">
+        🚀 Go to My Private Dashboard
+      </a>
     </div>
   </main>
-
-  <script src="js/storage.js"></script>
-  <script src="js/parser.js"></script>
-  <script>
-    let pendingInputData = "";
-    let duplicateMatchData = null;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('toggle-ai').addEventListener('click', () => switchView('ai'));
-        document.getElementById('toggle-manual').addEventListener('click', () => switchView('manual'));
-
-        document.getElementById('submit-btn').addEventListener('click', handleRecipeSubmission);
-        document.getElementById('manual-form').addEventListener('submit', handleManualSave);
-        setupModalListeners();
-    });
-
-    function switchView(mode) {
-        if(mode === 'ai') {
-            document.getElementById('toggle-ai').classList.add('active');
-            document.getElementById('toggle-manual').classList.remove('active');
-            document.getElementById('ai-view').classList.remove('hidden');
-            document.getElementById('manual-view').classList.add('hidden');
-        } else {
-            document.getElementById('toggle-manual').classList.add('active');
-            document.getElementById('toggle-ai').classList.remove('active');
-            document.getElementById('manual-view').classList.remove('hidden');
-            document.getElementById('ai-view').classList.add('hidden');
-        }
-    }
-
-    function handleManualSave(e) {
-        e.preventDefault();
-        
-        const ingLines = document.getElementById('manual-ingredients').value.split('\n').map(l => l.trim()).filter(Boolean);
-        const instLines = document.getElementById('manual-instructions').value.split('\n').map(l => l.trim()).filter(Boolean);
-
-        const customRecipe = {
-            title: document.getElementById('manual-title').value.trim(),
-            category: document.getElementById('manual-category').value,
-            prepTime: document.getElementById('manual-time').value.trim() || 'Unspecified',
-            ingredients: ingLines,
-            instructions: instLines,
-            sourceUrl: document.getElementById('manual-url').value.trim() || null
-        };
-
-        saveRecipe(customRecipe);
-        showAlert(`🎉 Manually saved "${customRecipe.title}" safely to your collection!`, "success");
-        document.getElementById('manual-form').reset();
-    }
-
-    async function handleRecipeSubmission() {
-        const inputField = document.getElementById('recipe-input');
-        pendingInputData = inputField.value.trim();
-
-        if (!pendingInputData) {
-            showAlert("Please enter a URL or paste text before parsing.", "error");
-            return;
-        }
-
-        updateStatus("Checking databases for duplicates...", "info");
-        duplicateMatchData = await checkForExistingRecipe(pendingInputData);
-
-        if (duplicateMatchData) {
-            clearStatus();
-            openDuplicateModal(duplicateMatchData);
-        } else {
-            executeAIParser(pendingInputData);
-        }
-    }
-
-    async function executeAIParser(textOrUrl) {
-        updateStatus("AI is reading and parsing your recipe... Please wait.", "loading");
-        try {
-            const parsedRecipe = await parseRecipeWithAI(textOrUrl); 
-            if (parsedRecipe) {
-                saveRecipe(parsedRecipe);
-                updateStatus(`🎉 Successfully added "${parsedRecipe.title}" to your collection!`, "success");
-                document.getElementById('recipe-input').value = "";
-            } else {
-                updateStatus("AI extraction returned no valid structured data.", "error");
-            }
-        } catch (error) {
-            updateStatus("Failed to reach the AI parsing server.", "error");
-        }
-    }
-
-    function openDuplicateModal(match) {
-        const modal = document.getElementById('duplicate-modal');
-        const modalText = document.getElementById('modal-text');
-        modalText.innerHTML = `This recipe URL was already discovered in <strong>${match.type}</strong> under the title: <br><br><em>"${match.recipe.title}"</em>.<br><br>Would you like to import the existing formatted copy to your collection immediately, or use AI credits to parse it again?`;
-        modal.classList.remove('hidden');
-    }
-
-    function closeDuplicateModal() {
-        document.getElementById('duplicate-modal').classList.add('hidden');
-        duplicateMatchData = null;
-    }
-
-    function setupModalListeners() {
-        document.getElementById('use-existing-btn').addEventListener('click', () => {
-            if (duplicateMatchData) {
-                const completelyOwned = getRecipes().some(r => r.title === duplicateMatchData.recipe.title);
-                if (completelyOwned) {
-                    showAlert("This recipe is already in your private collection!", "info");
-                } else {
-                    saveRecipe(duplicateMatchData.recipe);
-                    showAlert(`📥 Added existing copy of "${duplicateMatchData.recipe.title}" directly to your collection!`, "success");
-                }
-            }
-            closeDuplicateModal();
-        });
-        document.getElementById('force-parse-btn').addEventListener('click', () => {
-            closeDuplicateModal();
-            executeAIParser(pendingInputData);
-        });
-        document.getElementById('cancel-btn').addEventListener('click', closeDuplicateModal);
-    }
-
-    function updateStatus(msg, statusType) {
-        const box = document.getElementById('status-message');
-        box.innerText = msg;
-        box.className = `status-box ${statusType}`;
-    }
-
-    function showAlert(msg, statusType) {
-        updateStatus(msg, statusType);
-        setTimeout(clearStatus, 4000);
-    }
-
-    function clearStatus() {
-        document.getElementById('status-message').className = "status-box hidden";
-    }
-  </script>
 </body>
 </html>
