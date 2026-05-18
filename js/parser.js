@@ -1,7 +1,7 @@
 // js/parser.js
 
 // FIXED: Appended the correct serverless path to target your script file directly
-const NETLIFY_ENDPOINT = 'https://netlify.app';
+const NETLIFY_ENDPOINT = 'https://recipesaves.netlify.app';
 
 /**
  * Sends messy text or a recipe URL to the serverless function to parse with Gemini.
