@@ -1,32 +1,33 @@
-// js/themes.js
+function doPost(e) {
+  const GITHUB_USERNAME = "BoobotheHutt";
+  const PRIVATE_REPO = "recipes-private-backend";
+  const GITHUB_TOKEN = "ghp_PASTE_YOUR_ORIGINAL_CLASSIC_TOKEN_HERE";
 
-// 1. Run IMMEDIATELY to prevent the white screen flash in dark or sepia mode
-(function() {
-    const savedTheme = localStorage.getItem('site_theme') || 'light';
-    if (savedTheme !== 'light') {
-        if (document.body) {
-            document.body.className = `theme-${savedTheme}`;
-        } else {
-            document.addEventListener("DOMContentLoaded", () => {
-                document.body.className = `theme-${savedTheme}`;
-            });
-        }
-    }
-})();
+  const payload = JSON.parse(e.postData.contents);
+  const endpoint = `https://github.com{GITHUB_USERNAME}/${PRIVATE_REPO}/issues`;
 
-// 2. Manage the navbar selection sync across all pages
-document.addEventListener('DOMContentLoaded', () => {
-    const themeSelect = document.getElementById('theme-select');
-    if (!themeSelect) return;
+  // Route title formatting switches based on if the web front-end flagged it as a Sync event
+  let issueTitle = "Web Scrape Request";
+  let issueBody = payload.recipeText;
 
-    // Set the dropdown to match your saved setting
-    const savedTheme = localStorage.getItem('site_theme') || 'light';
-    themeSelect.value = savedTheme;
+  if (payload.isEditSync === true) {
+    issueTitle = "RECIPE_EDIT_SYNC: Modified data update pipeline item";
+  }
 
-    // When changed, apply globally and save
-    themeSelect.addEventListener('change', (e) => {
-        const selection = e.target.value;
-        localStorage.setItem('site_theme', selection);
-        document.body.className = selection !== 'light' ? `theme-${selection}` : '';
-    });
-});
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": "Bearer " + GITHUB_TOKEN },
+    payload: JSON.stringify({
+      title: issueTitle,
+      body: issueBody
+    })
+  };
+
+  try {
+    UrlFetchApp.fetch(endpoint, options);
+    return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
