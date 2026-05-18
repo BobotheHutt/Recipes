@@ -153,8 +153,9 @@
             return;
         }
 
-        if (!APP_CONFIG || !APP_CONFIG.GOOGLE_BRIDGE_URL) {
-            updateStatus("Error: Global configurations file is missing.", "error");
+        // Safety verification check ensuring the unified global setup object successfully loaded
+        if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.GOOGLE_BRIDGE_URL) {
+            showAlert("Configuration file error. Missing database access link map.", "error");
             return;
         }
 
@@ -180,13 +181,14 @@
             prepTime: "Parsing...",
             ingredients: ["Ingredients are currently extracting in the background."],
             instructions: ["Please wait roughly 20 seconds, then check the 'Explore Community' tab to view the final parsed details."],
-            sourceUrl: inputData.startsWith('http' ? inputData : null),
+            sourceUrl: inputData.startsWith('http') ? inputData : null,
             uploader: currentUploader
         };
 
         saveRecipe(temporaryLocalBackup);
 
         try {
+            // Automatically grabs your active link coordinates from the centralized APP_CONFIG map layer object
             await fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
                 method: "POST",
                 mode: "no-cors", 
