@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explore Recipes</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="index.html" class="nav-link">My Wallet</a>
+    <a href="explore.html" class="nav-link active">Explore Community</a>
+    <a href="collection.html" class="nav-link">Add with AI</a>
+  </nav>
+
+  <main class="container">
+    <h1>Community Recipes</h1>
+    <p>Pre-parsed recipes available to everyone without using AI credits.</p>
+
+    <div id="global-grid" class="recipe-grid"></div>
+  </main>
+
+  <script src="js/storage.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const grid = document.getElementById('global-grid');
+        const globalRecipes = await getGlobalRecipes();
+
+        if (globalRecipes.length === 0) {
+            grid.innerHTML = `<p>No public recipes added yet.</p>`;
+            return;
+        }
+
+        globalRecipes.forEach((recipe, index) => {
+            const card = document.createElement('div');
+            card.className = 'recipe-card';
+            card.innerHTML = `
+                <span class="badge">${recipe.category}</span>
+                <h3>${recipe.title}</h3>
+                <button class="save-to-local-btn" data-index="${index}">📥 Add to My Wallet</button>
+                <details>
+                    <summary>View Ingredients & Steps</summary>
+                    <h4>Ingredients:</h4>
+                    <ul>${recipe.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
+                    <h4>Instructions:</h4>
+                    <ol>${recipe.instructions.map(s => `<li>${s}</li>`).join('')}</ol>
+                </details>
+            `;
+            grid.appendChild(card);
+        });
+
+        // Event listener to copy public recipes into private local storage
+        grid.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('save-to-local-btn')) {
+                const index = e.target.dataset.index;
+                const selected = globalRecipes[index];
+                
+                // Avoid double saving
+                const alreadyHasIt = getRecipes().some(r => r.title === selected.title);
+                if (alreadyHasIt) {
+                    alert("This recipe is already in your wallet!");
+                    return;
+                }
+
+                saveRecipe(selected);
+                alert(`Saved "${selected.title}" to your private wallet!`);
+            }
+        });
+    });
+  </script>
+</body>
+</html>
