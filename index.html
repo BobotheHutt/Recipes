@@ -7,33 +7,21 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<!-- Place at the very top of body inside index, explore, and collection pages -->
-<div class="theme-wrapper">
-  <select id="theme-select">
-    <option value="light">☀️ Light Emerald</option>
-    <option value="dark">🌙 Dark Slate</option>
-    <option value="sepia">🍂 Cozy Sepia</option>
-  </select>
-</div>
 
-<script>
-  // Shared code logic to manage visual themes locally
-  const savedTheme = localStorage.getItem('site_theme') || 'light';
-  document.body.className = savedTheme !== 'light' ? `theme-${savedTheme}` : '';
-  document.getElementById('theme-select').value = savedTheme;
-
-  document.getElementById('theme-select').addEventListener('change', (e) => {
-      const selection = e.target.value;
-      localStorage.setItem('site_theme', selection);
-      document.body.className = selection !== 'light' ? `theme-${selection}` : '';
-  });
-</script>
+  <!-- Floating Theme Selector Layout -->
+  <div class="theme-wrapper">
+    <select id="theme-select">
+      <option value="light">☀️ Light Emerald</option>
+      <option value="dark">🌙 Dark Slate</option>
+      <option value="sepia">🍂 Cozy Sepia</option>
+    </select>
+  </div>
 
   <!-- Navigation -->
   <nav class="navbar">
     <a href="index.html" class="nav-link active">My Wallet</a>
     <a href="explore.html" class="nav-link">Explore Community</a>
-    <a href="collection.html" class="nav-link">Add with AI</a>
+    <a href="collection.html" class="nav-link">Add Recipes</a>
   </nav>
 
   <main class="container">
@@ -63,12 +51,11 @@
     let currentCategory = 'all';
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Initial build of the private wallet
+        // Initialize layouts and system controls
         renderPrivateRecipes();
-
-        // Attach interactive event listeners
-        document.getElementById('search-bar').addEventListener('input', renderPrivateRecipes);
         setupFilterListeners();
+        setupInterfaceActions();
+        setupGlobalThemeEngine();
     });
 
     function renderPrivateRecipes() {
@@ -102,6 +89,7 @@
             card.innerHTML = `
                 <div class="card-header">
                     <span class="badge">${recipe.category}</span>
+                    <button class="print-btn" data-index="${index}">🖨️ Print</button>
                     <button class="delete-btn" data-index="${index}">🗑️ Delete</button>
                 </div>
                 <h3>${recipe.title}</h3>
@@ -117,12 +105,13 @@
             `;
             grid.appendChild(card);
         });
-
-        // Setup individual card delete handlers
-        setupDeleteListeners();
     }
 
     function setupFilterListeners() {
+        // Handle input searching events dynamically
+        document.getElementById('search-bar').addEventListener('input', renderPrivateRecipes);
+
+        // Handle category tab clicks
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -134,9 +123,26 @@
         });
     }
 
-    function setupDeleteListeners() {
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+    function setupInterfaceActions() {
+        const grid = document.getElementById('recipe-grid');
+        
+        grid.addEventListener('click', (e) => {
+            // Handle Printing Actions
+            if (e.target.classList.contains('print-btn')) {
+                const cardElement = e.target.closest('.recipe-card');
+                const detailContainer = cardElement.querySelector('details');
+                const originalState = detailContainer.hasAttribute('open');
+                
+                // Force card open so printer can capture contents hidden inside details
+                detailContainer.setAttribute('open', '');
+                window.print();
+                
+                // Return card to original design state after printing box clears out
+                if (!originalState) detailContainer.removeAttribute('open');
+            }
+
+            // Handle Deleting Actions
+            if (e.target.classList.contains('delete-btn')) {
                 const targetIndex = parseInt(e.target.dataset.index, 10);
                 const privateRecipes = getRecipes();
                 const targetRecipe = privateRecipes[targetIndex];
@@ -144,9 +150,21 @@
                 if (confirm(`Are you sure you want to delete "${targetRecipe.title}" from your wallet?`)) {
                     privateRecipes.splice(targetIndex, 1);
                     localStorage.setItem('my_recipes', JSON.stringify(privateRecipes));
-                    renderPrivateRecipes(); // Re-render local layout
+                    renderPrivateRecipes();
                 }
-            });
+            }
+        });
+    }
+
+    function setupGlobalThemeEngine() {
+        const savedTheme = localStorage.getItem('site_theme') || 'light';
+        document.body.className = savedTheme !== 'light' ? `theme-${savedTheme}` : '';
+        document.getElementById('theme-select').value = savedTheme;
+
+        document.getElementById('theme-select').addEventListener('change', (e) => {
+            const selection = e.target.value;
+            localStorage.setItem('site_theme', selection);
+            document.body.className = selection !== 'light' ? `theme-${selection}` : '';
         });
     }
   </script>
