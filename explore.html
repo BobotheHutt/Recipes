@@ -17,9 +17,9 @@
     </select>
   </div>
 
-  <!-- Navigation -->
+  <!-- Navigation Bar -->
   <nav class="navbar">
-    <a href="index.html" class="nav-link">My Wallet</a>
+    <a href="index.html" class="nav-link">My Collection</a>
     <a href="explore.html" class="nav-link active">Explore Community</a>
     <a href="collection.html" class="nav-link">Add Recipes</a>
   </nav>
@@ -48,13 +48,12 @@
 
   <script src="js/storage.js"></script>
   <script>
-    let allGlobalRecipes = []; // Holds the master list once downloaded
+    let allGlobalRecipes = []; 
     let currentCategory = 'all';
 
     document.addEventListener('DOMContentLoaded', async () => {
-        allGlobalRecipes = await getGlobalRecipes(); // Pulls from js/global-recipes.json
+        allGlobalRecipes = await getGlobalRecipes(); 
         
-        // Initialize layouts and system controls
         renderCommunityRecipes();
         setupFilterListeners();
         setupInterfaceActions();
@@ -66,11 +65,8 @@
         const searchKeyword = document.getElementById('search-bar').value.toLowerCase().trim();
         grid.innerHTML = '';
 
-        // Filter out recipes that don't fit current category and keyword strings
         const filteredRecipes = allGlobalRecipes.filter(recipe => {
             const matchesCategory = (currentCategory === 'all' || recipe.category === currentCategory);
-            
-            // Checks title, category, and individual array items inside ingredients
             const matchesSearch = !searchKeyword || 
                 recipe.title.toLowerCase().includes(searchKeyword) ||
                 recipe.category.toLowerCase().includes(searchKeyword) ||
@@ -84,44 +80,40 @@
             return;
         }
 
-// Ensure this specific section in explore.html looks exactly like this:
-filteredRecipes.forEach(recipe => {
-    const card = document.createElement('div');
-    card.className = 'recipe-card';
-    card.innerHTML = `
-        <div class="card-header">
-            <span class="badge">${recipe.category}</span>
-            <button class="print-btn" data-title="${recipe.title}">🖨️ Print</button>
-            <button class="save-to-local-btn" data-title="${recipe.title}">📥 Add to Wallet</button>
-        </div>
-        <h3>${recipe.title}</h3>
-        <p class="meta-info">⏱️ Prep: ${recipe.prepTime}</p>
-        <details>
-            <summary>View Recipe Details</summary>
-            <h4>Ingredients:</h4>
-            <ul>${recipe.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
-            <h4>Instructions:</h4>
-            <ol>${recipe.instructions.map(s => `<li>${s}</li>`).join('')}</ol>
-            ${recipe.sourceUrl ? `<a href="${recipe.sourceUrl}" target="_blank" class="source-link">Original Source ↗</a>` : ''}
-        </details>
-    `;
-    grid.appendChild(card);
-});
-
+        filteredRecipes.forEach(recipe => {
+            const card = document.createElement('div');
+            card.className = 'recipe-card';
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="badge">${recipe.category}</span>
+                    <button class="print-btn" data-title="${recipe.title}">🖨️ Print</button>
+                    <button class="save-to-local-btn" data-title="${recipe.title}">📥 Add to Collection</button>
+                </div>
+                <h3>${recipe.title}</h3>
+                <p class="meta-info">⏱️ Prep: ${recipe.prepTime}</p>
+                <details>
+                    <summary>View Recipe Details</summary>
+                    <h4>Ingredients:</h4>
+                    <ul>${recipe.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
+                    <h4>Instructions:</h4>
+                    <ol>${recipe.instructions.map(s => `<li>${s}</li>`).join('')}</ol>
+                    ${recipe.sourceUrl ? `<a href="${recipe.sourceUrl}" target="_blank" class="source-link">Original Source ↗</a>` : ''}
+                </details>
+            `;
+            grid.appendChild(card);
+        });
     }
 
     function setupFilterListeners() {
-        // Handle input searching events dynamically
         document.getElementById('search-bar').addEventListener('input', renderCommunityRecipes);
 
-        // Handle category tab clicks
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 
                 currentCategory = e.target.dataset.category;
-                renderCommunityRecipes(); // Update layout dynamically
+                renderCommunityRecipes(); 
             });
         });
     }
@@ -130,34 +122,29 @@ filteredRecipes.forEach(recipe => {
         const grid = document.getElementById('global-grid');
         
         grid.addEventListener('click', (e) => {
-            // Handle Printing Actions
             if (e.target.classList.contains('print-btn')) {
                 const cardElement = e.target.closest('.recipe-card');
                 const detailContainer = cardElement.querySelector('details');
                 const originalState = detailContainer.hasAttribute('open');
                 
-                // Force card open so printer can capture contents hidden inside details
                 detailContainer.setAttribute('open', '');
                 window.print();
                 
-                // Return card to original design state after printing box clears out
                 if (!originalState) detailContainer.removeAttribute('open');
             }
 
-            // Handle Save to Wallet Actions
             if (e.target.classList.contains('save-to-local-btn')) {
                 const targetTitle = e.target.dataset.title;
                 const recipeObject = allGlobalRecipes.find(r => r.title === targetTitle);
                 
-                // Block double inputs into user's browser storage
                 const alreadyOwned = getRecipes().some(r => r.title === targetTitle);
                 if (alreadyOwned) {
-                    alert(`"${targetTitle}" is already in your private wallet.`);
+                    alert(`"${targetTitle}" is already in your collection.`);
                     return;
                 }
 
                 saveRecipe(recipeObject);
-                alert(`Successfully added "${targetTitle}" to your private wallet!`);
+                alert(`Successfully added "${targetTitle}" to your collection!`);
             }
         });
     }
