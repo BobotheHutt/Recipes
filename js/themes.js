@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const selection = e.target.value;
             localStorage.setItem('uploader_name', selection);
             
-            // Optional: Automatically reload grid displays if they exist on current page
+            // Automatically refresh layout grids if they exist on the page
             if (typeof renderPrivateRecipes === 'function') renderPrivateRecipes();
             if (typeof renderCommunityRecipes === 'function') renderCommunityRecipes();
         });
