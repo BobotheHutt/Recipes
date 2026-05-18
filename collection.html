@@ -20,9 +20,7 @@
     <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
       <!-- Profile Picker Dropdown -->
       <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer;">
-        <option value="Guest">👤 Guest</option>
-        <option value="Wife">👩 Wife</option>
-        <option value="Husband">👨 Husband</option>
+        <!-- Filled dynamically by js/themes.js -->
       </select>
 
       <!-- Theme Picker Dropdown -->
@@ -153,9 +151,9 @@
             return;
         }
 
-        // Safety verification check ensuring the unified global setup object successfully loaded
+        // Safety verification check ensuring the unified config setup mapping file exists
         if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.GOOGLE_BRIDGE_URL) {
-            showAlert("Configuration file error. Missing database access link map.", "error");
+            showAlert("Configuration file error. Missing centralized bridge access link.", "error");
             return;
         }
 
@@ -185,10 +183,11 @@
             uploader: currentUploader
         };
 
+        // 1. SAVE INSTANTLY TO LOCAL COLLECTION
         saveRecipe(temporaryLocalBackup);
 
         try {
-            // Automatically grabs your active link coordinates from the centralized APP_CONFIG map layer object
+            // 2. SIMULTANEOUSLY SEND TO GLOBAL BACKGROUND AUTOMATION ROUTE
             await fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
                 method: "POST",
                 mode: "no-cors", 
