@@ -85,11 +85,14 @@
 
   <script src="js/storage.js"></script>
   <script>
+    // ⚠️ CONFIGURATION: Paste your exact Google Web App URL link between the quotes below
+    const GOOGLE_BRIDGE_URL = "https://script.google.com/macros/s/AKfycbyDC-gSZ2Yb1b8wVdqfJCRjGg9RHqKJEzQPANhvUYeGlmpmxx2s6uDHoWuIQVNQuzzg/exec";
+
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('toggle-ai').addEventListener('click', () => switchView('ai'));
         document.getElementById('toggle-manual').addEventListener('click', () => switchView('manual'));
 
-        document.getElementById('submit-btn').addEventListener('click', handleRecipeForwarding);
+        document.getElementById('submit-btn').addEventListener('click', handleBackendAIProcessing);
         document.getElementById('manual-form').addEventListener('submit', handleManualSave);
     });
 
@@ -126,7 +129,7 @@
         document.getElementById('manual-form').reset();
     }
 
-    function handleRecipeForwarding() {
+    async function handleBackendAIProcessing() {
         const inputField = document.getElementById('recipe-input');
         const inputData = inputField.value.trim();
 
@@ -135,15 +138,23 @@
             return;
         }
 
-        // Standard link builder that injects her pasted text directly into a new GitHub issue draft
-        const titleText = encodeURIComponent("Web Scrape Request");
-        const bodyText = encodeURIComponent(inputData);
-        
-        const targetUrl = `https://github.com{titleText}&body=${bodyText}`;
-        
-        // Open the pre-filled private repository page in a new window tab instantly
-        window.open(targetUrl, '_blank');
-        inputField.value = "";
+        updateStatus("Processing your recipe link... Please wait.", "loading");
+
+        try {
+            // Hand the raw link over to the background Google script completely invisibly
+            const response = await fetch(GOOGLE_BRIDGE_URL, {
+                method: "POST",
+                mode: "no-cors", // Bypasses browser strict network barriers completely
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ recipeText: inputData })
+            });
+
+            updateStatus("🚀 Recipe submitted! It will parse automatically and appear under the 'Explore Community' tab in roughly 15-20 seconds.", "success");
+            inputField.value = "";
+        } catch (error) {
+            console.error(error);
+            updateStatus("Failed to process request. Check background system metrics.", "error");
+        }
     }
 
     function updateStatus(msg, statusType) {
@@ -154,7 +165,7 @@
 
     function showAlert(msg, statusType) {
         updateStatus(msg, statusType);
-        setTimeout(clearStatus, 5000);
+        setTimeout(clearStatus, 6000);
     }
 
     function clearStatus() {
