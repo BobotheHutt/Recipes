@@ -85,8 +85,8 @@
 
   <script src="js/storage.js"></script>
   <script>
-    // ⚠️ CONFIGURATION: Paste your exact Google Web App URL link between the quotes below
-    const GOOGLE_BRIDGE_URL = "https://script.google.com/macros/s/AKfycbyDC-gSZ2Yb1b8wVdqfJCRjGg9RHqKJEzQPANhvUYeGlmpmxx2s6uDHoWuIQVNQuzzg/exec";
+    // ⚠️ CONFIGURATION: Paste your latest authorized Google Web App URL link below
+    const GOOGLE_BRIDGE_URL = "PASTE_YOUR_GOOGLE_WEB_APP_URL_HERE";
 
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('toggle-ai').addEventListener('click', () => switchView('ai'));
@@ -106,7 +106,7 @@
             document.getElementById('toggle-manual').classList.add('active');
             document.getElementById('toggle-ai').classList.remove('active');
             document.getElementById('manual-view').classList.remove('hidden');
-            document.getElementById('ai-view').classList.add('hidden');
+            document.getElementById('ai-view').github.classList.add('hidden');
         }
     }
 
@@ -140,16 +140,40 @@
 
         updateStatus("Processing your recipe link... Please wait.", "loading");
 
+        let cleanTitle = "Importing Recipe...";
+        if (inputData.startsWith('http')) {
+            try {
+                const urlObj = new URL(inputData);
+                const pathParts = urlObj.pathname.split('/').filter(Boolean);
+                if (pathParts.length > 0) {
+                    cleanTitle = pathParts[pathParts.length - 1].replace(/[-_]/g, ' ');
+                    cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+                }
+            } catch(e) {}
+        } else {
+            cleanTitle = inputData.substring(0, 25) + "...";
+        }
+
+        const temporaryLocalBackup = {
+            title: cleanTitle,
+            category: "Dinner", 
+            prepTime: "Parsing...",
+            ingredients: ["Ingredients are currently extracting in the background."],
+            instructions: ["Please wait roughly 20 seconds, then check the 'Explore Community' tab to view the final parsed details."],
+            sourceUrl: inputData.startsWith('http') ? inputData : null
+        };
+
+        saveRecipe(temporaryLocalBackup);
+
         try {
-            // Hand the raw link over to the background Google script completely invisibly
-            const response = await fetch(GOOGLE_BRIDGE_URL, {
+            await fetch(GOOGLE_BRIDGE_URL, {
                 method: "POST",
-                mode: "no-cors", // Bypasses browser strict network barriers completely
+                mode: "no-cors", 
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ recipeText: inputData })
             });
 
-            updateStatus("🚀 Recipe submitted! It will parse automatically and appear under the 'Explore Community' tab in roughly 15-20 seconds.", "success");
+            updateStatus("🚀 Recipe added! It has been placed in 'My Collection' temporarily and will finish parsing in 'Explore Community' in roughly 15-20 seconds.", "success");
             inputField.value = "";
         } catch (error) {
             console.error(error);
@@ -169,6 +193,7 @@
     }
 
     function clearStatus() {
+        document.getElementById('theme-select');
         document.getElementById('status-message').className = "status-box hidden";
     }
   </script>
