@@ -1,12 +1,162 @@
-// Mock behavior for your "Submit" button
-document.getElementById('parse-btn').addEventListener('click', async () => {
-    const inputData = document.getElementById('recipe-input').value;
-    
-    // Show a loading state, then call AI
-    const parsedRecipe = await parseRecipeWithAI(inputData);
-    
-    if (parsedRecipe) {
-        saveRecipe(parsedRecipe);
-        alert(`Successfully added ${parsedRecipe.title}!`);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Recipes with AI</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <a href="index.html" class="nav-link">My Wallet</a>
+    <a href="explore.html" class="nav-link">Explore Community</a>
+    <a href="collection.html" class="nav-link active">Add with AI</a>
+  </nav>
+
+  <main class="container">
+    <h1>Add a New Recipe</h1>
+    <p>Paste a website URL or the raw text of a recipe below. The AI will extract the ingredients and instructions into your clean format.</p>
+
+    <!-- Parser Input Interface -->
+    <div class="input-card">
+      <textarea id="recipe-input" rows="8" placeholder="Paste a recipe URL (e.g., https://site.com) or copy-paste messy text from a food blog..."></textarea>
+      
+      <div class="actions">
+        <button id="submit-btn" class="primary-btn">✨ Parse with AI</button>
+      </div>
+    </div>
+
+    <!-- Status Alerts Display -->
+    <div id="status-message" class="status-box hidden"></div>
+
+    <!-- Smart Duplicate Interceptor Modal (Hidden by default) -->
+    <div id="duplicate-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <h3>🔍 Recipe Already Saved!</h3>
+        <p id="modal-text">We found this exact recipe inside your private wallet.</p>
+        
+        <div class="modal-actions">
+          <button id="use-existing-btn" class="secondary-btn">📦 Use Existing Copy</button>
+          <button id="force-parse-btn" class="danger-btn">⚡ Run AI Parser Anyway</button>
+          <button id="cancel-btn" class="text-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Load script dependencies in exact order -->
+  <script src="js/storage.js"></script>
+  <script src="js/parser.js"></script>
+  <script>
+    let pendingInputData = "";
+    let duplicateMatchData = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const submitBtn = document.getElementById('submit-btn');
+        
+        submitBtn.addEventListener('click', handleRecipeSubmission);
+        setupModalListeners();
+    });
+
+    async function handleRecipeSubmission() {
+        const inputField = document.getElementById('recipe-input');
+        pendingInputData = inputField.value.trim();
+
+        if (!pendingInputData) {
+            showAlert("Please enter a URL or paste text before parsing.", "error");
+            return;
+        }
+
+        // Trigger the smart interception check
+        updateStatus("Checking databases for duplicates...", "info");
+        duplicateMatchData = await checkForExistingRecipe(pendingInputData);
+
+        if (duplicateMatchData) {
+            // A matching recipe URL was found! Interrupt flow and open the popup choice box.
+            clearStatus();
+            openDuplicateModal(duplicateMatchData);
+        } else {
+            // Clean path, no matching duplicates found anywhere. Run AI safely.
+            executeAIParser(pendingInputData);
+        }
     }
-});
+
+    async function executeAIParser(textOrUrl) {
+        updateStatus("AI is reading and parsing your recipe... Please wait.", "loading");
+        
+        try {
+            // Calls function inside js/parser.js
+            const parsedRecipe = await parseRecipeWithAI(textOrUrl); 
+            
+            if (parsedRecipe) {
+                saveRecipe(parsedRecipe); // Saves locally into js/storage.js
+                updateStatus(`🎉 Successfully added "${parsedRecipe.title}" to your wallet!`, "success");
+                document.getElementById('recipe-input').value = ""; // Reset input
+            } else {
+                updateStatus("AI extraction returned no valid structured data.", "error");
+            }
+        } catch (error) {
+            updateStatus("Failed to reach the AI parsing server.", "error");
+        }
+    }
+
+    // Modal Action Controls
+    function openDuplicateModal(match) {
+        const modal = document.getElementById('duplicate-modal');
+        const modalText = document.getElementById('modal-text');
+        
+        modalText.innerHTML = `This recipe URL was already discovered in <strong>${match.type}</strong> under the title: <br><br><em>"${match.recipe.title}"</em>.<br><br>Would you like to import the existing formatted copy to your wallet immediately, or use AI credits to parse it again?`;
+        modal.classList.remove('hidden');
+    }
+
+    function closeDuplicateModal() {
+        document.getElementById('duplicate-modal').classList.add('hidden');
+        duplicateMatchData = null;
+    }
+
+    function setupModalListeners() {
+        // Option 1: Save directly from database match, bypasses AI completely
+        document.getElementById('use-existing-btn').addEventListener('click', () => {
+            if (duplicateMatchData) {
+                // Check if they are trying to save something already inside their own wallet
+                const completelyOwned = getRecipes().some(r => r.title === duplicateMatchData.recipe.title);
+                if (completelyOwned) {
+                    showAlert("This recipe is already in your private wallet!", "info");
+                } else {
+                    saveRecipe(duplicateMatchData.recipe);
+                    showAlert(`📥 Added existing copy of "${duplicateMatchData.recipe.title}" directly to your wallet!`, "success");
+                }
+            }
+            closeDuplicateModal();
+        });
+
+        // Option 2: Overrule interceptor, burn AI token to parse anyway
+        document.getElementById('force-parse-btn').addEventListener('click', () => {
+            closeDuplicateModal();
+            executeAIParser(pendingInputData);
+        });
+
+        // Option 3: Dismiss everything
+        document.getElementById('cancel-btn').addEventListener('click', closeDuplicateModal);
+    }
+
+    // Utility Status Alerts
+    function updateStatus(msg, statusType) {
+        const box = document.getElementById('status-message');
+        box.innerText = msg;
+        box.className = `status-box ${statusType}`;
+    }
+
+    function showAlert(msg, statusType) {
+        updateStatus(msg, statusType);
+        setTimeout(clearStatus, 4000);
+    }
+
+    function clearStatus() {
+        document.getElementById('status-message').className = "status-box hidden";
+    }
+  </script>
+</body>
+</html>
