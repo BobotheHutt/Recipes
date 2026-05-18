@@ -1,33 +1,48 @@
-function doPost(e) {
-  const GITHUB_USERNAME = "BoobotheHutt";
-  const PRIVATE_REPO = "recipes-private-backend";
-  const GITHUB_TOKEN = "ghp_PASTE_YOUR_ORIGINAL_CLASSIC_TOKEN_HERE";
+// js/themes.js
 
-  const payload = JSON.parse(e.postData.contents);
-  const endpoint = `https://github.com{GITHUB_USERNAME}/${PRIVATE_REPO}/issues`;
+// 1. Run IMMEDIATELY to prevent the white screen flash in dark or sepia mode
+(function() {
+    const savedTheme = localStorage.getItem('site_theme') || 'light';
+    if (savedTheme !== 'light') {
+        if (document.body) {
+            document.body.className = `theme-${savedTheme}`;
+        } else {
+            document.addEventListener("DOMContentLoaded", () => {
+                document.body.className = `theme-${savedTheme}`;
+            });
+        }
+    }
+})();
 
-  // Route title formatting switches based on if the web front-end flagged it as a Sync event
-  let issueTitle = "Web Scrape Request";
-  let issueBody = payload.recipeText;
+// 2. Manage the navbar selection dropdowns sync across all pages
+document.addEventListener('DOMContentLoaded', () => {
+    const themeSelect = document.getElementById('theme-select');
+    const profileSelect = document.getElementById('profile-select');
 
-  if (payload.isEditSync === true) {
-    issueTitle = "RECIPE_EDIT_SYNC: Modified data update pipeline item";
-  }
+    // --- Theme Syncing ---
+    if (themeSelect) {
+        const savedTheme = localStorage.getItem('site_theme') || 'light';
+        themeSelect.value = savedTheme;
 
-  const options = {
-    method: "post",
-    contentType: "application/json",
-    headers: { "Authorization": "Bearer " + GITHUB_TOKEN },
-    payload: JSON.stringify({
-      title: issueTitle,
-      body: issueBody
-    })
-  };
+        themeSelect.addEventListener('change', (e) => {
+            const selection = e.target.value;
+            localStorage.setItem('site_theme', selection);
+            document.body.className = selection !== 'light' ? `theme-${selection}` : '';
+        });
+    }
 
-  try {
-    UrlFetchApp.fetch(endpoint, options);
-    return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
+    // --- Profile Syncing ---
+    if (profileSelect) {
+        const savedProfile = localStorage.getItem('uploader_name') || 'Guest';
+        profileSelect.value = savedProfile;
+
+        profileSelect.addEventListener('change', (e) => {
+            const selection = e.target.value;
+            localStorage.setItem('uploader_name', selection);
+            
+            // Optional: Automatically reload grid displays if they exist on current page
+            if (typeof renderPrivateRecipes === 'function') renderPrivateRecipes();
+            if (typeof renderCommunityRecipes === 'function') renderCommunityRecipes();
+        });
+    }
+});
