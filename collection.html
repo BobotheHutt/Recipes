@@ -35,7 +35,14 @@
 
     <!-- Interface Mode 1: AI Scraper View Container -->
     <div id="ai-view" class="input-card">
-      <textarea id="recipe-input" rows="8" placeholder="Paste a recipe URL or messy raw text here..."></textarea>
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label>Your Name</label>
+        <input type="text" id="ai-uploader-name" placeholder="e.g., Mom, Sarah" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px;">
+      </div>
+      <div class="form-group">
+        <label>Recipe URL or Messy Text</label>
+        <textarea id="recipe-input" rows="6" placeholder="Paste a recipe URL or messy raw text here..."></textarea>
+      </div>
       <div class="actions">
         <button id="submit-btn" class="primary-btn">✨ Parse with AI</button>
       </div>
@@ -44,6 +51,10 @@
     <!-- Interface Mode 2: Manual Data Entry Form Block Container -->
     <div id="manual-view" class="input-card hidden">
       <form id="manual-form">
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" id="manual-uploader-name" placeholder="e.g., Mom, Sarah" required>
+        </div>
         <div class="form-group">
           <label>Recipe Title</label>
           <input type="text" id="manual-title" placeholder="e.g., Mom's Lasagna" required>
@@ -85,10 +96,15 @@
 
   <script src="js/storage.js"></script>
   <script>
-    // ⚠️ CONFIGURATION: Paste your latest authorized Google Web App URL link below
+    // ⚠️ CONFIGURATION: Paste your authorized Google Web App URL link below
     const GOOGLE_BRIDGE_URL = "PASTE_YOUR_GOOGLE_WEB_APP_URL_HERE";
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Auto-fill her name if she has typed it previously
+        const savedName = localStorage.getItem('uploader_name') || '';
+        document.getElementById('ai-uploader-name').value = savedName;
+        document.getElementById('manual-uploader-name').value = savedName;
+
         document.getElementById('toggle-ai').addEventListener('click', () => switchView('ai'));
         document.getElementById('toggle-manual').addEventListener('click', () => switchView('manual'));
 
@@ -106,12 +122,15 @@
             document.getElementById('toggle-manual').classList.add('active');
             document.getElementById('toggle-ai').classList.remove('active');
             document.getElementById('manual-view').classList.remove('hidden');
-            document.getElementById('ai-view').github.classList.add('hidden');
+            document.getElementById('ai-view').classList.add('hidden');
         }
     }
 
     function handleManualSave(e) {
         e.preventDefault();
+        const uploader = document.getElementById('manual-uploader-name').value.trim() || 'Anonymous';
+        localStorage.setItem('uploader_name', uploader); // Remember her name locally
+
         const ingLines = document.getElementById('manual-ingredients').value.split('\n').map(l => l.trim()).filter(Boolean);
         const instLines = document.getElementById('manual-instructions').value.split('\n').map(l => l.trim()).filter(Boolean);
 
@@ -121,23 +140,27 @@
             prepTime: document.getElementById('manual-time').value.trim() || 'Unspecified',
             ingredients: ingLines,
             instructions: instLines,
-            sourceUrl: document.getElementById('manual-url').value.trim() || null
+            sourceUrl: document.getElementById('manual-url').value.trim() || null,
+            uploader: uploader // Added attribution metric [2, 3]
         };
 
         saveRecipe(customRecipe);
         showAlert(`🎉 Manually saved "${customRecipe.title}" safely to your collection!`, "success");
         document.getElementById('manual-form').reset();
+        document.getElementById('manual-uploader-name').value = uploader;
     }
 
     async function handleBackendAIProcessing() {
         const inputField = document.getElementById('recipe-input');
         const inputData = inputField.value.trim();
+        const uploader = document.getElementById('ai-uploader-name').value.trim() || 'Anonymous';
 
         if (!inputData) {
             showAlert("Please enter a URL or paste text before parsing.", "error");
             return;
         }
 
+        localStorage.setItem('uploader_name', uploader); // Remember her name locally
         updateStatus("Processing your recipe link... Please wait.", "loading");
 
         let cleanTitle = "Importing Recipe...";
@@ -160,7 +183,8 @@
             prepTime: "Parsing...",
             ingredients: ["Ingredients are currently extracting in the background."],
             instructions: ["Please wait roughly 20 seconds, then check the 'Explore Community' tab to view the final parsed details."],
-            sourceUrl: inputData.startsWith('http') ? inputData : null
+            sourceUrl: inputData.startsWith('http') ? inputData : null,
+            uploader: uploader // Added attribution metric [2, 3]
         };
 
         saveRecipe(temporaryLocalBackup);
@@ -170,7 +194,10 @@
                 method: "POST",
                 mode: "no-cors", 
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ recipeText: inputData })
+                body: JSON.stringify({ 
+                    recipeText: inputData,
+                    uploaderName: uploader // Forward name tag payload metric down across pipeline [2]
+                })
             });
 
             updateStatus("🚀 Recipe added! It has been placed in 'My Collection' temporarily and will finish parsing in 'Explore Community' in roughly 15-20 seconds.", "success");
@@ -193,7 +220,6 @@
     }
 
     function clearStatus() {
-        document.getElementById('theme-select');
         document.getElementById('status-message').className = "status-box hidden";
     }
   </script>
