@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Recipe Wallet</title>
+  <title>My Recipe Collection</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -17,15 +17,15 @@
     </select>
   </div>
 
-  <!-- Navigation -->
+  <!-- Navigation Bar -->
   <nav class="navbar">
-    <a href="index.html" class="nav-link active">My Wallet</a>
+    <a href="index.html" class="nav-link active">My Collection</a>
     <a href="explore.html" class="nav-link">Explore Community</a>
     <a href="collection.html" class="nav-link">Add Recipes</a>
   </nav>
 
   <main class="container">
-    <h1>My Private Wallet</h1>
+    <h1>My Collection</h1>
     <p>Your personal collection of recipes, saved securely on your device.</p>
 
     <!-- Search and Filter Control Panel -->
@@ -51,7 +51,6 @@
     let currentCategory = 'all';
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Initialize layouts and system controls
         renderPrivateRecipes();
         setupFilterListeners();
         setupInterfaceActions();
@@ -61,14 +60,11 @@
     function renderPrivateRecipes() {
         const grid = document.getElementById('recipe-grid');
         const searchKeyword = document.getElementById('search-bar').value.toLowerCase().trim();
-        const privateRecipes = getRecipes(); // Pulls list from storage.js
+        const privateRecipes = getRecipes(); 
         grid.innerHTML = '';
 
-        // Deep filter through user's local storage array
         const filteredRecipes = privateRecipes.filter(recipe => {
             const matchesCategory = (currentCategory === 'all' || recipe.category === currentCategory);
-            
-            // Check titles, categories, and item strings in ingredients
             const matchesSearch = !searchKeyword || 
                 recipe.title.toLowerCase().includes(searchKeyword) ||
                 recipe.category.toLowerCase().includes(searchKeyword) ||
@@ -78,11 +74,10 @@
         });
 
         if (filteredRecipes.length === 0) {
-            grid.innerHTML = `<p class="empty-state">No matching recipes found in your wallet.</p>`;
+            grid.innerHTML = `<p class="empty-state">No matching recipes found in your collection.</p>`;
             return;
         }
 
-        // Generate matching visual cards
         filteredRecipes.forEach((recipe, index) => {
             const card = document.createElement('div');
             card.className = 'recipe-card';
@@ -108,10 +103,8 @@
     }
 
     function setupFilterListeners() {
-        // Handle input searching events dynamically
         document.getElementById('search-bar').addEventListener('input', renderPrivateRecipes);
 
-        // Handle category tab clicks
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -127,27 +120,23 @@
         const grid = document.getElementById('recipe-grid');
         
         grid.addEventListener('click', (e) => {
-            // Handle Printing Actions
             if (e.target.classList.contains('print-btn')) {
                 const cardElement = e.target.closest('.recipe-card');
                 const detailContainer = cardElement.querySelector('details');
                 const originalState = detailContainer.hasAttribute('open');
                 
-                // Force card open so printer can capture contents hidden inside details
                 detailContainer.setAttribute('open', '');
                 window.print();
                 
-                // Return card to original design state after printing box clears out
                 if (!originalState) detailContainer.removeAttribute('open');
             }
 
-            // Handle Deleting Actions
             if (e.target.classList.contains('delete-btn')) {
                 const targetIndex = parseInt(e.target.dataset.index, 10);
                 const privateRecipes = getRecipes();
                 const targetRecipe = privateRecipes[targetIndex];
 
-                if (confirm(`Are you sure you want to delete "${targetRecipe.title}" from your wallet?`)) {
+                if (confirm(`Are you sure you want to delete "${targetRecipe.title}" from your collection?`)) {
                     privateRecipes.splice(targetIndex, 1);
                     localStorage.setItem('my_recipes', JSON.stringify(privateRecipes));
                     renderPrivateRecipes();
