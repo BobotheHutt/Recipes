@@ -52,7 +52,6 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
         allGlobalRecipes = await getGlobalRecipes(); 
-        
         renderCommunityRecipes();
         setupFilterListeners();
         setupInterfaceActions();
@@ -81,6 +80,10 @@
         filteredRecipes.forEach(recipe => {
             const card = document.createElement('div');
             card.className = 'recipe-card';
+            
+            // Build uploader name metadata string safely [3]
+            const authorTag = recipe.uploader ? `👤 Added by: ${recipe.uploader}` : '👤 Added by: Community';
+
             card.innerHTML = `
                 <div class="card-header">
                     <span class="badge">${recipe.category}</span>
@@ -88,7 +91,8 @@
                     <button class="save-to-local-btn" data-title="${recipe.title}">📥 Add to Collection</button>
                 </div>
                 <h3>${recipe.title}</h3>
-                <p class="meta-info">⏱️ Prep: ${recipe.prepTime}</p>
+                <p class="meta-info" style="margin-bottom:4px;">⏱️ Prep: ${recipe.prepTime}</p>
+                <p style="font-size:0.8rem; font-style:italic; color:var(--text-muted); margin-bottom:16px;">${authorTag}</p>
                 <details>
                     <summary>View Recipe Details</summary>
                     <h4>Ingredients:</h4>
@@ -127,7 +131,6 @@
                 
                 detailContainer.setAttribute('open', '');
                 window.print();
-                
                 if (!originalState) detailContainer.removeAttribute('open');
             }
 
