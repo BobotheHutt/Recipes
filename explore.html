@@ -84,29 +84,30 @@
             return;
         }
 
-        // Generate the visual markup grid
-        filteredRecipes.forEach(recipe => {
-            const card = document.createElement('div');
-            card.className = 'recipe-card';
-            card.innerHTML = `
-                <div class="card-header">
-                    <span class="badge">${recipe.category}</span>
-                    <button class="print-btn" data-title="${recipe.title}">🖨️ Print</button>
-                    <button class="save-to-local-btn" data-title="${recipe.title}">📥 Add to Wallet</button>
-                </div>
-                <h3>${recipe.title}</h3>
-                <p class="meta-info">⏱️ Prep: ${recipe.prepTime}</p>
-                <details>
-                    <summary>View Recipe Details</summary>
-                    <h4>Ingredients:</h4>
-                    <ul>${recipe.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
-                    <h4>Instructions:</h4>
-                    <ol>${recipe.instructions.map(s => `<li>${s}</li>`).join('')}</ol>
-                    ${recipe.sourceUrl ? `<a href="${recipe.sourceUrl}" target="_blank" class="source-link">Original Source ↗</a>` : ''}
-                </details>
-            `;
-            grid.appendChild(card);
-        });
+// Ensure this specific section in explore.html looks exactly like this:
+filteredRecipes.forEach(recipe => {
+    const card = document.createElement('div');
+    card.className = 'recipe-card';
+    card.innerHTML = `
+        <div class="card-header">
+            <span class="badge">${recipe.category}</span>
+            <button class="print-btn" data-title="${recipe.title}">🖨️ Print</button>
+            <button class="save-to-local-btn" data-title="${recipe.title}">📥 Add to Wallet</button>
+        </div>
+        <h3>${recipe.title}</h3>
+        <p class="meta-info">⏱️ Prep: ${recipe.prepTime}</p>
+        <details>
+            <summary>View Recipe Details</summary>
+            <h4>Ingredients:</h4>
+            <ul>${recipe.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
+            <h4>Instructions:</h4>
+            <ol>${recipe.instructions.map(s => `<li>${s}</li>`).join('')}</ol>
+            ${recipe.sourceUrl ? `<a href="${recipe.sourceUrl}" target="_blank" class="source-link">Original Source ↗</a>` : ''}
+        </details>
+    `;
+    grid.appendChild(card);
+});
+
     }
 
     function setupFilterListeners() {
