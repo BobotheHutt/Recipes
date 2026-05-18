@@ -89,8 +89,8 @@
 
   <script src="js/storage.js"></script>
   <script>
-    // ⚠️ CONFIGURATION: Make sure this points to your exact background Web App endpoint URL
-    const GOOGLE_BRIDGE_URL = "https://script.google.com/macros/s/AKfycbz73ImPeVgMgEH0G9YqtJc_lzuG5GheAszy4hbF1uGmi66e7bngewtXXUVR8vi0Pk6J/exec";
+    // ⚠️ CONFIGURATION: Replace this with your exact active Version 4 Google Web App endpoint URL
+    const GOOGLE_BRIDGE_URL = "https://script.google.com/macros/s/AKfycbzbr4dDR_MNPWpwRpbQ_cbDQtB8exUmjB9r_0SznThxB8xmggLUFTtDrEcd417mqiWa/exec";
 
     let currentCategory = 'all';
     let activeEditingIndex = null;
@@ -125,6 +125,10 @@
         filteredRecipes.forEach((recipe, index) => {
             const card = document.createElement('div');
             card.className = 'recipe-card';
+            
+            // Render attribution tag safely on the dashboard sheet cards
+            const authorTag = recipe.uploader ? `👤 Added by: ${recipe.uploader}` : '👤 Added by: Me';
+
             card.innerHTML = `
                 <div class="card-header">
                     <span class="badge">${recipe.category}</span>
@@ -133,7 +137,8 @@
                     <button class="delete-btn" data-index="${index}">🗑️ Delete</button>
                 </div>
                 <h3>${recipe.title}</h3>
-                <p class="meta-info">⏱️ Prep: ${recipe.prepTime}</p>
+                <p class="meta-info" style="margin-bottom:4px;">⏱️ Prep: ${recipe.prepTime}</p>
+                <p style="font-size:0.8rem; font-style:italic; color:var(--text-muted); margin-bottom:16px;">${authorTag}</p>
                 <details>
                     <summary>View Recipe Details</summary>
                     <h4>Ingredients:</h4>
@@ -175,7 +180,7 @@
                 if (!originalState) detailContainer.removeAttribute('open');
             }
 
-            // Launch Edit Modal Window
+            // Open Edit Modal Overlay Window
             if (e.target.classList.contains('edit-btn')) {
                 activeEditingIndex = parseInt(e.target.dataset.index, 10);
                 const recipe = getRecipes()[activeEditingIndex];
@@ -202,7 +207,7 @@
             }
         });
 
-        // Close Edit Window handlers
+        // Close Edit Window click target elements
         document.getElementById('close-edit-btn').addEventListener('click', () => {
             document.getElementById('edit-modal').classList.add('hidden');
             activeEditingIndex = null;
@@ -218,7 +223,7 @@
         const privateRecipes = getRecipes();
         const originalRecipe = privateRecipes[activeEditingIndex];
 
-        // Package Modified Object Values
+        // Structure individual multiline textboxes into clean arrays
         const ingLines = document.getElementById('edit-ingredients').value.split('\n').map(l => l.trim()).filter(Boolean);
         const instLines = document.getElementById('edit-instructions').value.split('\n').map(l => l.trim()).filter(Boolean);
 
@@ -228,26 +233,26 @@
             prepTime: document.getElementById('edit-time').value.trim() || 'Unspecified',
             ingredients: ingLines,
             instructions: instLines,
-            sourceUrl: originalRecipe.sourceUrl // Retain historical tracking connection pointer
+            sourceUrl: originalRecipe.sourceUrl, // Keep link tracker anchor info
+            uploader: originalRecipe.uploader || 'Me' // Keep author tag connection intact
         };
 
-        // 1. Commit modifications instantly to her device LocalStorage array
+        // 1. Save directly into device collection local cache
         privateRecipes[activeEditingIndex] = updatedRecipe;
         localStorage.setItem('my_recipes', JSON.stringify(privateRecipes));
         renderPrivateRecipes();
         document.getElementById('edit-modal').classList.add('hidden');
 
-        // 2. Invisible Sync Pipeline: If it has a source URL link, update global database in background
+        // 2. Global Sync: If it came from a URL string, pass the update downstream
         if (updatedRecipe.sourceUrl) {
             try {
-                // Send payload string down across to the same Google bridge script
                 fetch(GOOGLE_BRIDGE_URL, {
                     method: "POST",
                     mode: "no-cors",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ 
                         recipeText: JSON.stringify(updatedRecipe),
-                        isEditSync: true // Helper payload flag
+                        isEditSync: true 
                     })
                 });
                 alert(`Saved locally! Global community card will update in about 15 seconds.`);
