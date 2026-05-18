@@ -1,41 +1,43 @@
-async function parseRecipeWithAI(rawText) {
-    // Retrieve user's locally stored API key
-    const apiKey = localStorage.getItem('gemini_api_key');
-    if (!apiKey) {
-        alert("Please save your free Gemini API key in the settings first!");
-        return;
-    }
+// js/parser.js
 
-    const endpoint = `https://googleapis.com{apiKey}`;
-    
-    const prompt = `Analyze this recipe text or URL. Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra text:
-    {
-      "title": "Recipe Name",
-      "category": "Breakfast/Lunch/Dinner/Dessert/Snack",
-      "prepTime": "X mins",
-      "ingredients": ["item 1", "item 2"],
-      "instructions": ["step 1", "step 2"],
-      "sourceUrl": "URL if applicable"
-    }
-    Recipe context: ${rawText}`;
+// TODO: Replace this URL with your actual deployed Netlify function domain later
+// Example: 'https://netlify.app'
+const NETLIFY_ENDPOINT = 'https://netlify.app';
 
+/**
+ * Sends messy text or a recipe URL to the serverless function to parse with Gemini.
+ * @param {string} rawTextOrUrl - The text or URL inputted by the user.
+ * @returns {Object|null} The cleanly structured recipe JSON object, or null if it fails.
+ */
+async function parseRecipeWithAI(rawTextOrUrl) {
     try {
-        const response = await fetch(endpoint, {
+        const response = await fetch(NETLIFY_ENDPOINT, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
+            headers: { 
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ rawText: rawTextOrUrl })
         });
 
-        const data = await response.json();
-        const rawJsonText = data.candidates[0].content.parts[0].text.trim();
-        
-        // Clean up any accidental markdown code blocks from AI
-        const cleanJson = rawJsonText.replace(/```json|```/g, '');
-        return JSON.parse(cleanJson);
+        // Handle errors like server crashes, rate limits (429), or missing keys (500)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error("Backend Error Details:", errorData);
+            
+            if (response.status === 429) {
+                alert("The AI limit was reached for this minute. Please pause for 60 seconds and try again!");
+            } else {
+                alert("Failed to parse recipe. The system backend encountered an error.");
+            }
+            return null;
+        }
+
+        // Return the clean JSON schema directly to collection.html
+        return await response.json();
+
     } catch (error) {
-        console.error("AI Parsing failed:", error);
-        alert("Failed to parse recipe. Check your API key or input.");
+        console.error("Network or connection breakdown:", error);
+        alert("Unable to reach the processing server. Please check your internet connection or verify your deployment.");
+        return null;
     }
 }
