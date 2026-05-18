@@ -1,0 +1,12 @@
+// Mock behavior for your "Submit" button
+document.getElementById('parse-btn').addEventListener('click', async () => {
+    const inputData = document.getElementById('recipe-input').value;
+    
+    // Show a loading state, then call AI
+    const parsedRecipe = await parseRecipeWithAI(inputData);
+    
+    if (parsedRecipe) {
+        saveRecipe(parsedRecipe);
+        alert(`Successfully added ${parsedRecipe.title}!`);
+    }
+});
