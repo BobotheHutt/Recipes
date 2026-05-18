@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeSelect = document.getElementById('theme-select');
     const profileSelect = document.getElementById('profile-select');
 
-    // Inject custom HTML modal layout window for naming inputs into the page body
+    // Create popup markup layer securely
     createProfileModalMarkup();
 
     // --- Theme Syncing Setup ---
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const selection = e.target.value;
 
             if (selection === 'ADD_NEW_PROFILE_ACTION') {
-                // Open our custom clean overlay modal box instead of the broken browser prompt
+                // Open our custom clean overlay modal box layout framework safely
                 document.getElementById('custom-profile-modal').classList.remove('hidden');
                 document.getElementById('new-profile-name-input').focus();
                 profileSelect.value = localStorage.getItem('uploader_name') || "";
@@ -57,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Setup listeners inside our profile name popup wrapper modal
     setupProfileModalActions(profileSelect);
 });
 
@@ -79,7 +78,7 @@ function createProfileModalMarkup() {
     modalDiv.id = 'custom-profile-modal';
     modalDiv.className = 'modal-overlay hidden';
     modalDiv.innerHTML = `
-        <div class="modal-content" style="max-width: 400px; padding: 24px;">
+        <div class="modal-content" style="padding: 24px;">
             <h3 style="margin-bottom: 12px;">➕ Add New Profile</h3>
             <div class="form-group" style="margin-bottom: 20px;">
                 <label style="display:block; margin-bottom:6px; font-weight:600; font-size:0.9rem;">Profile Name</label>
@@ -123,7 +122,6 @@ function setupProfileModalActions(profileSelectEl) {
         input.value = "";
     });
 
-    // Let user press "Enter" inside input field box to save instantly
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
