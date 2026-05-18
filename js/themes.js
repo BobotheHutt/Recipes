@@ -1,14 +1,21 @@
 // js/themes.js
 
-// 1. Run immediately to stop the white unstyled screen flash in dark/sepia modes
+// 1. Safe Immediate Function to apply theme styles as early as humanly possible
 (function() {
     const savedTheme = localStorage.getItem('site_theme') || 'light';
     if (savedTheme !== 'light') {
-        document.body.className = `theme-${savedTheme}`;
+        // Check if body is ready; if not, wait for the DOM to prevent null errors
+        if (document.body) {
+            document.body.className = `theme-${savedTheme}`;
+        } else {
+            document.addEventListener("DOMContentLoaded", () => {
+                document.body.className = `theme-${savedTheme}`;
+            });
+        }
     }
 })();
 
-// 2. Automatically set up the dropdown selection box once the elements load
+// 2. Automatically sync up dropdown interactive logic 
 document.addEventListener('DOMContentLoaded', () => {
     const themeSelect = document.getElementById('theme-select');
     if (!themeSelect) return;
