@@ -2,7 +2,7 @@
 
 // TODO: Replace this URL with your actual deployed Netlify function domain later
 // Example: 'https://netlify.app'
-const NETLIFY_ENDPOINT = 'https://netlify.app';
+const NETLIFY_ENDPOINT = 'https://recipesaves.netlify.app/';
 
 /**
  * Sends messy text or a recipe URL to the serverless function to parse with Gemini.
