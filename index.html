@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Recipe Collection</title>
   <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js" defer></script>
   <script src="js/themes.js" defer></script>
 </head>
 <body>
@@ -15,12 +16,22 @@
     <a href="explore.html" class="nav-link">Explore Community</a>
     <a href="collection.html" class="nav-link">Add Recipes</a>
     
-    <!-- Inline Theme Selector -->
-    <select id="theme-select" style="margin-left: auto;">
-      <option value="light">☀️ Light Emerald</option>
-      <option value="dark">🌙 Dark Slate</option>
-      <option value="sepia">🍂 Cozy Sepia</option>
-    </select>
+    <!-- Unified Controls Selection Block Group -->
+    <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+      <!-- Profile Picker Dropdown -->
+      <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer;">
+        <option value="Guest">👤 Guest</option>
+        <option value="Wife">👩 Wife</option>
+        <option value="Husband">👨 Husband</option>
+      </select>
+
+      <!-- Theme Picker Dropdown -->
+      <select id="theme-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer;">
+        <option value="light">☀️ Light Emerald</option>
+        <option value="dark">🌙 Dark Slate</option>
+        <option value="sepia">🍂 Cozy Sepia</option>
+      </select>
+    </div>
   </nav>
 
   <main class="container">
@@ -89,9 +100,6 @@
 
   <script src="js/storage.js"></script>
   <script>
-    // ⚠️ CONFIGURATION: Replace this with your exact active Version 4 Google Web App endpoint URL
-    const GOOGLE_BRIDGE_URL = "https://script.google.com/macros/s/AKfycbzbr4dDR_MNPWpwRpbQ_cbDQtB8exUmjB9r_0SznThxB8xmggLUFTtDrEcd417mqiWa/exec";
-
     let currentCategory = 'all';
     let activeEditingIndex = null;
 
@@ -126,7 +134,6 @@
             const card = document.createElement('div');
             card.className = 'recipe-card';
             
-            // Render attribution tag safely on the dashboard sheet cards
             const authorTag = recipe.uploader ? `👤 Added by: ${recipe.uploader}` : '👤 Added by: Me';
 
             card.innerHTML = `
@@ -180,7 +187,6 @@
                 if (!originalState) detailContainer.removeAttribute('open');
             }
 
-            // Open Edit Modal Overlay Window
             if (e.target.classList.contains('edit-btn')) {
                 activeEditingIndex = parseInt(e.target.dataset.index, 10);
                 const recipe = getRecipes()[activeEditingIndex];
@@ -207,7 +213,6 @@
             }
         });
 
-        // Close Edit Window click target elements
         document.getElementById('close-edit-btn').addEventListener('click', () => {
             document.getElementById('edit-modal').classList.add('hidden');
             activeEditingIndex = null;
@@ -223,7 +228,6 @@
         const privateRecipes = getRecipes();
         const originalRecipe = privateRecipes[activeEditingIndex];
 
-        // Structure individual multiline textboxes into clean arrays
         const ingLines = document.getElementById('edit-ingredients').value.split('\n').map(l => l.trim()).filter(Boolean);
         const instLines = document.getElementById('edit-instructions').value.split('\n').map(l => l.trim()).filter(Boolean);
 
@@ -233,20 +237,18 @@
             prepTime: document.getElementById('edit-time').value.trim() || 'Unspecified',
             ingredients: ingLines,
             instructions: instLines,
-            sourceUrl: originalRecipe.sourceUrl, // Keep link tracker anchor info
-            uploader: originalRecipe.uploader || 'Me' // Keep author tag connection intact
+            sourceUrl: originalRecipe.sourceUrl,
+            uploader: originalRecipe.uploader || 'Me'
         };
 
-        // 1. Save directly into device collection local cache
         privateRecipes[activeEditingIndex] = updatedRecipe;
         localStorage.setItem('my_recipes', JSON.stringify(privateRecipes));
         renderPrivateRecipes();
         document.getElementById('edit-modal').classList.add('hidden');
 
-        // 2. Global Sync: If it came from a URL string, pass the update downstream
-        if (updatedRecipe.sourceUrl) {
+        if (updatedRecipe.sourceUrl && APP_CONFIG.GOOGLE_BRIDGE_URL) {
             try {
-                fetch(GOOGLE_BRIDGE_URL, {
+                fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
                     method: "POST",
                     mode: "no-cors",
                     headers: { "Content-Type": "application/json" },
