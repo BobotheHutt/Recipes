@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeSelect = document.getElementById('theme-select');
     const profileSelect = document.getElementById('profile-select');
 
-    // Create popup markup layer securely
+    // FIXED: Moved this into the DOMContentLoaded block so document.body is guaranteed to exist!
     createProfileModalMarkup();
 
     // --- Theme Syncing Setup ---
@@ -98,6 +98,9 @@ function setupProfileModalActions(profileSelectEl) {
     const input = document.getElementById('new-profile-name-input');
     const cancelBtn = document.getElementById('cancel-profile-modal-btn');
     const saveBtn = document.getElementById('save-profile-modal-btn');
+
+    // Prevent crashing bugs if the script triggers layout render errors
+    if (!modal || !cancelBtn || !saveBtn) return;
 
     cancelBtn.addEventListener('click', () => {
         modal.classList.add('hidden');
