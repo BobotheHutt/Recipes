@@ -149,10 +149,9 @@
 
         updateStatus("AI is reading and parsing your recipe directly inside the browser...", "loading");
 
-        // BULLETPROOF WAY: Creates the full Google API URL cleanly to prevent the markdown string bug
-        const urlObj = new URL('https://googleapis.com');
-        urlObj.searchParams.set('key', GEMINI_SECRET_KEY);
-        const endpoint = urlObj.toString();
+        // FIXED: Re-built using standard text gluing to avoid the URL object string parser bugs
+        const baseEndpoint = 'https://googleapis.com';
+        const endpoint = baseEndpoint + GEMINI_SECRET_KEY;
         
         const prompt = `Analyze this recipe text or URL. Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra conversational text:
         {
@@ -180,7 +179,7 @@
             
             parsedRecipe.uploader = currentUploader;
 
-            // Commit card straight to device storage array folder natively
+            // Save straight to browser client memory storage natively
             saveRecipe(parsedRecipe);
 
             updateStatus(`🎉 Successfully added "${parsedRecipe.title}" straight to your collection!`, "success");
