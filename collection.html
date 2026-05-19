@@ -150,7 +150,7 @@
         updateStatus("AI is reading and parsing your recipe directly inside the browser...", "loading");
 
         // FIXED: Re-built using standard text gluing to avoid the URL object string parser bugs
-        const baseEndpoint = 'https://googleapis.com';
+        const baseEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
         const endpoint = baseEndpoint + GEMINI_SECRET_KEY;
         
         const prompt = `Analyze this recipe text or URL. Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra conversational text:
