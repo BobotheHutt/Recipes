@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeSelect = document.getElementById('theme-select');
     const profileSelect = document.getElementById('profile-select');
 
-    // FIXED: Moved this into the DOMContentLoaded block so document.body is guaranteed to exist!
+    // Build popup layout container instantly as soon as page structures render
     createProfileModalMarkup();
 
     // --- Theme Syncing Setup ---
@@ -36,6 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Dynamic Profile Engine Setup ---
     if (profileSelect) {
+        // Enforce fallback uploader property state parameter mapping metrics
+        if (!localStorage.getItem('uploader_name')) {
+            localStorage.setItem('uploader_name', 'Guest');
+        }
         if (!localStorage.getItem('site_profiles')) {
             localStorage.setItem('site_profiles', JSON.stringify([]));
         }
@@ -46,10 +50,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const selection = e.target.value;
 
             if (selection === 'ADD_NEW_PROFILE_ACTION') {
-                // Open our custom clean overlay modal box layout framework safely
-                document.getElementById('custom-profile-modal').classList.remove('hidden');
-                document.getElementById('new-profile-name-input').focus();
-                profileSelect.value = localStorage.getItem('uploader_name') || "";
+                // Force an explicit inline style block display switch override command
+                const modal = document.getElementById('custom-profile-modal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    document.getElementById('new-profile-name-input').focus();
+                }
+                // Return selection tracker text to the previously active name tag state
+                profileSelect.value = localStorage.getItem('uploader_name') || "Guest";
             } else {
                 localStorage.setItem('uploader_name', selection);
                 triggerPageGridUpdates();
@@ -61,11 +69,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderProfileOptions(selectEl) {
-    const savedActiveName = localStorage.getItem('uploader_name') || '';
+    const savedActiveName = localStorage.getItem('uploader_name') || 'Guest';
     const profilesList = JSON.parse(localStorage.getItem('site_profiles')) || [];
     
+    // "Guest" is hardcoded right into the baseline structural dropdown options tree
     selectEl.innerHTML = `
-        <option value="" disabled ${!savedActiveName ? 'selected' : ''}>👤 Select Profile</option>
+        <option value="Guest" ${savedActiveName === 'Guest' ? 'selected' : ''}>👤 Guest</option>
         ${profilesList.map(name => `<option value="${name}" ${savedActiveName === name ? 'selected' : ''}>👤 ${name}</option>`).join('')}
         <option value="ADD_NEW_PROFILE_ACTION" style="font-weight: 600; color: var(--primary);">➕ Add New Profile</option>
     `;
@@ -76,17 +85,30 @@ function createProfileModalMarkup() {
     
     const modalDiv = document.createElement('div');
     modalDiv.id = 'custom-profile-modal';
-    modalDiv.className = 'modal-overlay hidden';
+    
+    // Explicit styling commands to bypass hidden class override logic conflicts entirely
+    modalDiv.style.position = 'fixed';
+    modalDiv.style.top = '0';
+    modalDiv.style.left = '0';
+    modalDiv.style.width = '100%';
+    modalDiv.style.height = '100%';
+    modalDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    modalDiv.style.backdropFilter = 'blur(4px)';
+    modalDiv.style.display = 'none'; 
+    modalDiv.style.justifyContent = 'center';
+    modalDiv.style.alignItems = 'center';
+    modalDiv.style.zIndex = '9999';
+
     modalDiv.innerHTML = `
-        <div class="modal-content" style="padding: 24px;">
-            <h3 style="margin-bottom: 12px;">➕ Add New Profile</h3>
-            <div class="form-group" style="margin-bottom: 20px;">
+        <div style="background: var(--bg-card, #ffffff); color: var(--text-main, #1f2937); padding: 32px; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
+            <h3 style="margin-bottom: 12px; font-size: 1.4rem;">➕ Add New Profile</h3>
+            <div style="margin-bottom: 20px;">
                 <label style="display:block; margin-bottom:6px; font-weight:600; font-size:0.9rem;">Profile Name</label>
-                <input type="text" id="new-profile-name-input" placeholder="e.g., Sarah, Mom" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-main); color:var(--text-main); outline:none;">
+                <input type="text" id="new-profile-name-input" placeholder="e.g., Sarah, Mom" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; outline:none; font-size:1rem; background: var(--bg-main, #f9fafb); color: var(--text-main, #1f2937);">
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 8px;">
-                <button type="button" id="cancel-profile-modal-btn" class="text-btn" style="padding: 8px 16px;">Cancel</button>
-                <button type="button" id="save-profile-modal-btn" class="primary-btn" style="padding: 8px 16px;">Create</button>
+                <button type="button" id="cancel-profile-modal-btn" style="padding: 10px 20px; border-radius: 8px; cursor: pointer; border: none; background: transparent; color: #4b5563;">Cancel</button>
+                <button type="button" id="save-profile-modal-btn" style="padding: 10px 20px; border-radius: 8px; cursor: pointer; border: none; background: #10b981; color: white; font-weight: 500;">Create</button>
             </div>
         </div>
     `;
@@ -99,17 +121,16 @@ function setupProfileModalActions(profileSelectEl) {
     const cancelBtn = document.getElementById('cancel-profile-modal-btn');
     const saveBtn = document.getElementById('save-profile-modal-btn');
 
-    // Prevent crashing bugs if the script triggers layout render errors
     if (!modal || !cancelBtn || !saveBtn) return;
 
     cancelBtn.addEventListener('click', () => {
-        modal.classList.add('hidden');
+        modal.style.display = 'none';
         input.value = "";
     });
 
     saveBtn.addEventListener('click', () => {
         const cleanName = input.value.trim();
-        if (!cleanName) return;
+        if (!cleanName || cleanName.toLowerCase() === 'guest') return;
 
         const currentProfiles = JSON.parse(localStorage.getItem('site_profiles')) || [];
         if (!currentProfiles.includes(cleanName)) {
@@ -121,7 +142,7 @@ function setupProfileModalActions(profileSelectEl) {
         renderProfileOptions(profileSelectEl);
         triggerPageGridUpdates();
 
-        modal.classList.add('hidden');
+        modal.style.display = 'none';
         input.value = "";
     });
 
@@ -133,6 +154,7 @@ function setupProfileModalActions(profileSelectEl) {
     });
 }
 
+// Global interface callback update triggers
 function triggerPageGridUpdates() {
     if (typeof renderPrivateRecipes === 'function') renderPrivateRecipes();
     if (typeof renderCommunityRecipes === 'function') renderCommunityRecipes();
