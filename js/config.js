@@ -5,6 +5,6 @@ const APP_CONFIG = {
     GOOGLE_BRIDGE_URL: "https://script.google.com/macros/s/AKfycbzbr4dDR_MNPWpwRpbQ_cbDQtB8exUmjB9r_0SznThxB8xmggLUFTtDrEcd417mqiWa/exec",
     
     // Your verified GitHub credentials
-    GITHUB_USERNAME: "BoobotheHutt",
+    GITHUB_USERNAME: "BobotheHutt",
     PRIVATE_REPO_NAME: "recipes-private-backend"
 };
