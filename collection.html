@@ -146,7 +146,7 @@
         updateStatus("AI is reading and parsing your recipe directly inside the browser...", "loading");
 
         // Your verified working address link string
-        const baseEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
+        const baseEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key=';
         const endpoint = baseEndpoint + GEMINI_SECRET_KEY;
         
         const promptText = `Analyze this recipe text or URL. Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra conversational text:
