@@ -5,18 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Add Recipes</title>
   <link rel="stylesheet" href="css/style.css">
-  <!-- Shared settings, themes, and profile modular script tags -->
   <script src="js/config.js" defer></script>
   <script src="js/themes.js" defer></script>
-  <script src="js/profiles.js" defer></script>
 </head>
 <body>
 
-  <!-- Navigation Bar (Shared Selectors will auto-inject right inside here) -->
+  <!-- Navigation Bar -->
   <nav class="navbar">
     <a href="index.html" class="nav-link">My Collection</a>
     <a href="explore.html" class="nav-link">Explore Community</a>
     <a href="collection.html" class="nav-link active">Add Recipes</a>
+    
+    <!-- Unified Controls Selection Block Group -->
+    <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+      <!-- Profile Picker Dropdown -->
+      <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
+      </select>
+
+      <!-- Theme Picker Dropdown -->
+      <select id="theme-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
+        <option value="light">☀️ Light Emerald</option>
+        <option value="dark">🌙 Dark Slate</option>
+        <option value="sepia">🍂 Cozy Sepia</option>
+      </select>
+    </div>
   </nav>
 
   <main class="container">
@@ -92,6 +104,7 @@
         document.getElementById('manual-form').addEventListener('submit', handleManualSave);
     });
 
+    // Toggle logic tracking page layout configurations
     function switchView(mode) {
         if(mode === 'ai') {
             document.getElementById('toggle-ai').classList.add('active');
@@ -169,20 +182,22 @@
             uploader: currentUploader
         };
 
+        // Save placeholder item right to her browser memory
         saveRecipe(temporaryLocalBackup);
 
         try {
+            // FIXED: Hand raw text payload across with standard cross-origin adjustments 
+            // completely resolving the background submission loop blocks
             await fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
                 method: "POST",
-                mode: "no-cors", 
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "text/plain" }, 
                 body: JSON.stringify({ 
                     recipeText: inputData,
                     uploaderName: currentUploader
                 })
             });
 
-            updateStatus("🚀 Recipe added! It has been placed in 'My Collection' temporarily and will finish parsing in 'Explore Community' in roughly 15-20 seconds.", "success");
+            updateStatus("🚀 Recipe added! It has been placed in 'My Collection' temporarily and will finish parsing into 'Explore Community' in roughly 15-20 seconds.", "success");
             inputField.value = "";
         } catch (error) {
             console.error(error);
@@ -190,6 +205,7 @@
         }
     }
 
+    // Interactive notification label display states
     function updateStatus(msg, statusType) {
         const box = document.getElementById('status-message');
         box.innerText = msg;
