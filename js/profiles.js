@@ -1,8 +1,11 @@
 // js/profiles.js
 
-document.addEventListener('DOMContentLoaded', () => {
+function initializeProfileDropdown() {
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
+
+    // Check if the dropdown already exists to prevent duplicate injections
+    if (document.getElementById('profile-select')) return;
 
     // 1. Build and append the profile select dropdown dynamically into the navigation bar
     const profileSelect = document.createElement('select');
@@ -49,7 +52,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     setupProfileModalActions(profileSelect);
-});
+}
+
+// Ensure the code fires regardless of script tag loading speeds
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeProfileDropdown);
+} else {
+    initializeProfileDropdown();
+}
 
 function renderProfileOptions(selectEl) {
     const savedActiveName = localStorage.getItem('uploader_name') || 'Guest';
