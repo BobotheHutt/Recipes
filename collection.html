@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Add Recipes</title>
   <link rel="stylesheet" href="css/style.css">
-  <script src="js/config.js" defer></script>
+  <!-- Shared settings, themes, profiles, and your ignored local key file -->
+  <script src="js/api-key.js" defer></script>
   <script src="js/themes.js" defer></script>
   <script src="js/profiles.js" defer></script>
 </head>
@@ -87,7 +88,7 @@
         document.getElementById('toggle-ai').addEventListener('click', () => switchView('ai'));
         document.getElementById('toggle-manual').addEventListener('click', () => switchView('manual'));
 
-        document.getElementById('submit-btn').addEventListener('click', handleBackendAIProcessing);
+        document.getElementById('submit-btn').addEventListener('click', handleDirectAIProcessing);
         document.getElementById('manual-form').addEventListener('submit', handleManualSave);
     });
 
@@ -123,11 +124,11 @@
         };
 
         saveRecipe(customRecipe);
-        showAlert(`🎉 Manually saved "${customRecipe.title}" safely to your collection!`, "success");
+        showAlert(`🎉 Saved "${customRecipe.title}" safely to your collection!`, "success");
         document.getElementById('manual-form').reset();
     }
 
-    async function handleBackendAIProcessing() {
+    async function handleDirectAIProcessing() {
         const inputField = document.getElementById('recipe-input');
         const inputData = inputField.value.trim();
         const currentUploader = localStorage.getItem('uploader_name') || 'Guest';
@@ -137,57 +138,50 @@
             return;
         }
 
-        // FIXED: Pulls the data path straight from the global object map inside js/config.js
-        if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.GOOGLE_BRIDGE_URL) {
-            showAlert("Configuration file error. Missing bridge link mapping coordinates.", "error");
+        // Verification safety lock checking for your ignored local variable
+        if (typeof GEMINI_SECRET_KEY === 'undefined' || !GEMINI_SECRET_KEY) {
+            showAlert("Secret key missing. Make sure your local js/api-key.js file exists.", "error");
             return;
         }
 
-        updateStatus("Processing your recipe link... Please wait.", "loading");
+        updateStatus("AI is reading and parsing your recipe directly inside the browser...", "loading");
 
-        let cleanTitle = "Importing Recipe...";
-        if (inputData.startsWith('http')) {
-            try {
-                const urlObj = new URL(inputData);
-                const pathParts = urlObj.pathname.split('/').filter(Boolean);
-                if (pathParts.length > 0) {
-                    cleanTitle = pathParts[pathParts.length - 1].replace(/[-_]/g, ' ');
-                    cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
-                }
-            } catch(e) {}
-        } else {
-            cleanTitle = inputData.substring(0, 25) + "...";
+        const endpoint = `https://googleapis.com{GEMINI_SECRET_KEY}`;
+        const prompt = `Analyze this recipe text or URL. Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra conversational text:
+        {
+          "title": "Recipe Name",
+          "category": "Breakfast/Lunch/Dinner/Dessert/Snack",
+          "prepTime": "X mins",
+          "ingredients": ["item 1", "item 2"],
+          "instructions": ["step 1", "step 2"],
+          "sourceUrl": "URL if applicable"
         }
-
-        const temporaryLocalBackup = {
-            title: cleanTitle,
-            category: "Dinner", 
-            prepTime: "Parsing...",
-            ingredients: ["Ingredients are currently extracting in the background."],
-            instructions: ["Please wait roughly 20 seconds, then check the 'Explore Community' tab to view the final parsed details."],
-            sourceUrl: inputData.startsWith('http') ? inputData : null,
-            uploader: currentUploader
-        };
-
-        saveRecipe(temporaryLocalBackup);
+        Recipe context: ${inputData}`;
 
         try {
-            // Send payload data directly across the pipeline
-            await fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
-                method: "POST",
-                mode: "no-cors", 
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    recipeText: inputData,
-                    uploaderName: currentUploader
-                })
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });
 
-            updateStatus("🚀 Recipe added! It has been placed in 'My Collection' temporarily and will finish parsing into 'Explore Community' in roughly 15-20 seconds.", "success");
+            if (!response.ok) throw new Error("API call failed");
+
+            const data = await response.json();
+            const rawJsonText = data.candidates[0].content.parts[0].text.trim();
+            const parsedRecipe = JSON.parse(rawJsonText.replace(/```json|```/g, ''));
+            
+            // Attach active profile name tag attribute
+            parsedRecipe.uploader = currentUploader;
+
+            // Save directly to her device collection storage folder immediately!
+            saveRecipe(parsedRecipe);
+
+            updateStatus(`🎉 Successfully added "${parsedRecipe.title}" straight to your collection!`, "success");
             inputField.value = "";
         } catch (error) {
             console.error(error);
-            updateStatus("Failed to process request. Check background system metrics.", "error");
+            updateStatus("AI extraction failed. Check link structure or key availability.", "error");
         }
     }
 
