@@ -79,12 +79,6 @@
     </div>
 
     <div id="status-message" class="status-box hidden"></div>
-    
-    <!-- Hidden form module to cleanly transmit data cross-origin without triggering CORS blocks -->
-    <form id="hidden-google-form" method="POST" target="hidden-iframe" class="hidden">
-      <input type="hidden" name="payload" id="hidden-payload-field">
-    </form>
-    <iframe name="hidden-iframe" id="hidden-iframe" class="hidden"></iframe>
   </main>
 
   <script src="js/storage.js"></script>
@@ -177,18 +171,17 @@
         saveRecipe(temporaryLocalBackup);
 
         try {
-            // Package payload data cleanly inside our hidden form router 
-            const form = document.getElementById('hidden-google-form');
-            const field = document.getElementById('hidden-payload-field');
-            
-            form.action = APP_CONFIG.GOOGLE_BRIDGE_URL;
-            field.value = JSON.stringify({ 
-                recipeText: inputData,
-                uploaderName: currentUploader
-            });
+            // FIXED: Using standard, secure web content parameters to send form data cleanly to Google
+            const formData = new URLSearchParams();
+            formData.append('recipeText', inputData);
+            formData.append('uploaderName', currentUploader);
 
-            // Execute submission event completely cross-origin with no CORS network barriers
-            form.submit();
+            await fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
+                method: "POST",
+                mode: "no-cors", // Keeps network operations completely silent and unblocked
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: formData.toString()
+            });
 
             updateStatus("🚀 Recipe added! It has been placed in 'My Collection' temporarily and will finish parsing into 'Explore Community' in roughly 15-20 seconds.", "success");
             inputField.value = "";
