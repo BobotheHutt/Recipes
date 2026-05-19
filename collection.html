@@ -146,8 +146,11 @@
 
         updateStatus("AI is reading and parsing your recipe directly inside the browser...", "loading");
 
-        // FIXED: Re-built with correct backticks and the absolute complete Google endpoint routing path
-        const endpoint = `https://googleapis.com${GEMINI_SECRET_KEY}`;
+// A permanent, formatting-proof way to build the endpoint link
+const url = new URL('https://googleapis.com');
+url.searchParams.set('key', GEMINI_SECRET_KEY);
+const endpoint = url.toString();
+
         
         const prompt = `Analyze this recipe text or URL. Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra conversational text:
         {
