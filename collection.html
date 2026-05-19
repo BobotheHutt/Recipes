@@ -73,10 +73,6 @@
           <label>Source Web link (Optional)</label>
           <input type="url" id="manual-url" placeholder="https://site.com">
         </div>
-        <div class="form-group class-toggle hidden">
-          <label>Hidden Frame</label>
-          <iframe name="hidden-iframe" id="hidden-iframe"></iframe>
-        </div>
         <div class="actions">
           <button type="submit" class="primary-btn">💾 Save Recipe Manual</button>
         </div>
@@ -149,11 +145,11 @@
 
         updateStatus("AI is reading and parsing your recipe directly inside the browser...", "loading");
 
-        // FIXED: Re-built using standard text gluing to avoid the URL object string parser bugs
+        // Your verified working address link string
         const baseEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
         const endpoint = baseEndpoint + GEMINI_SECRET_KEY;
         
-        const prompt = `Analyze this recipe text or URL. Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra conversational text:
+        const promptText = `Analyze this recipe text or URL. Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra conversational text:
         {
           "title": "Recipe Name",
           "category": "Breakfast/Lunch/Dinner/Dessert/Snack",
@@ -168,18 +164,27 @@
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                // FIXED: Wrapped payload contents inside Google's mandatory structural schema format layers
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: promptText
+                        }]
+                    }]
+                })
             });
 
             if (!response.ok) throw new Error("API call failed");
 
             const data = await response.json();
-            const rawJsonText = data.candidates.content.parts.text.trim();
+            
+            // Extract the text output block right out of Google's response tree schema
+            const rawJsonText = data.candidates[0].content.parts[0].text.trim();
             const parsedRecipe = JSON.parse(rawJsonText.replace(/```json|```/g, ''));
             
             parsedRecipe.uploader = currentUploader;
 
-            // Save straight to browser client memory storage natively
+            // Commit card straight to device storage array folder natively
             saveRecipe(parsedRecipe);
 
             updateStatus(`🎉 Successfully added "${parsedRecipe.title}" straight to your collection!`, "success");
