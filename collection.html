@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Add Recipes</title>
   <link rel="stylesheet" href="css/style.css">
-  <!-- Central settings map and modular global dropdown logic elements -->
+  <!-- Core settings map and global navbar selector script imports -->
   <script src="js/config.js" defer></script>
   <script src="js/themes.js" defer></script>
   <script src="js/profiles.js" defer></script>
@@ -138,16 +138,16 @@
             return;
         }
 
-        // Safety block confirming our centralized cloud coordinates exist on page load
+        // Validate that our centralized layout configuration file map handles initialization on page load
         if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.CLOUDFLARE_BRIDGE_URL) {
-            showAlert("Configuration file error. Missing central layout coordinate mappings.", "error");
+            showAlert("Configuration file error. Missing central app routing parameters.", "error");
             return;
         }
 
         updateStatus("Cloudflare secure bridge is processing your link through AI...", "loading");
 
         try {
-            // Dynamically references your custom cloud gateway address map parameter
+            // Pulls the verified custom domain path straight from your settings configuration map
             const response = await fetch(APP_CONFIG.CLOUDFLARE_BRIDGE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -158,20 +158,19 @@
 
             const data = await response.json();
             
-            // Extract nested string data safely straight out of Cloudflare's transit envelope
             const rawJsonText = data.candidates.content.parts.text.trim();
             const parsedRecipe = JSON.parse(rawJsonText.replace(/```json|```/g, ''));
             
             parsedRecipe.uploader = currentUploader;
 
-            // Commit structured metadata card natively directly to her private local array folder
+            // Commit the newly parsed recipe data natively straight to her local browser memory storage folder
             saveRecipe(parsedRecipe);
 
             updateStatus("🎉 Successfully added \"" + parsedRecipe.title + "\" straight to your collection!", "success");
             inputField.value = "";
         } catch (error) {
             console.error(error);
-            updateStatus("Cloudflare extraction failed. Verify dashboard variable permissions or log streams.", "error");
+            updateStatus("Cloudflare extraction failed. Check configuration logs or API variables.", "error");
         }
     }
 
