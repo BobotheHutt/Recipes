@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Add Recipes</title>
   <link rel="stylesheet" href="css/style.css">
-  <!-- Shared settings, themes, profiles, and your ignored local key file -->
+  <!-- Shared settings, themes, profiles, and your hidden local key file -->
   <script src="js/api-key.js" defer></script>
   <script src="js/themes.js" defer></script>
   <script src="js/profiles.js" defer></script>
@@ -73,6 +73,10 @@
           <label>Source Web link (Optional)</label>
           <input type="url" id="manual-url" placeholder="https://site.com">
         </div>
+        <div class="form-group class-toggle hidden">
+          <label>Hidden Frame</label>
+          <iframe name="hidden-iframe" id="hidden-iframe"></iframe>
+        </div>
         <div class="actions">
           <button type="submit" class="primary-btn">💾 Save Recipe Manual</button>
         </div>
@@ -138,7 +142,6 @@
             return;
         }
 
-        // Verification safety lock checking for your hidden local key file variable
         if (typeof GEMINI_SECRET_KEY === 'undefined' || !GEMINI_SECRET_KEY) {
             showAlert("Secret key missing. Make sure your local js/api-key.js file exists.", "error");
             return;
@@ -146,11 +149,10 @@
 
         updateStatus("AI is reading and parsing your recipe directly inside the browser...", "loading");
 
-// A permanent, formatting-proof way to build the endpoint link
-const url = new URL('https://googleapis.com');
-url.searchParams.set('key', GEMINI_SECRET_KEY);
-const endpoint = url.toString();
-
+        // BULLETPROOF WAY: Creates the full Google API URL cleanly to prevent the markdown string bug
+        const urlObj = new URL('https://googleapis.com');
+        urlObj.searchParams.set('key', GEMINI_SECRET_KEY);
+        const endpoint = urlObj.toString();
         
         const prompt = `Analyze this recipe text or URL. Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra conversational text:
         {
@@ -178,7 +180,7 @@ const endpoint = url.toString();
             
             parsedRecipe.uploader = currentUploader;
 
-            // Commit right to her device storage array folder natively
+            // Commit card straight to device storage array folder natively
             saveRecipe(parsedRecipe);
 
             updateStatus(`🎉 Successfully added "${parsedRecipe.title}" straight to your collection!`, "success");
