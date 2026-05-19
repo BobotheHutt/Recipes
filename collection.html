@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/style.css">
   <script src="js/config.js" defer></script>
   <script src="js/themes.js" defer></script>
+  <script src="js/profiles.js" defer></script>
 </head>
 <body>
 
@@ -15,20 +16,6 @@
     <a href="index.html" class="nav-link">My Collection</a>
     <a href="explore.html" class="nav-link">Explore Community</a>
     <a href="collection.html" class="nav-link active">Add Recipes</a>
-    
-    <!-- Unified Controls Selection Block Group -->
-    <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
-      <!-- Profile Picker Dropdown -->
-      <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
-      </select>
-
-      <!-- Theme Picker Dropdown -->
-      <select id="theme-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
-        <option value="light">☀️ Light Emerald</option>
-        <option value="dark">🌙 Dark Slate</option>
-        <option value="sepia">🍂 Cozy Sepia</option>
-      </select>
-    </div>
   </nav>
 
   <main class="container">
@@ -92,6 +79,12 @@
     </div>
 
     <div id="status-message" class="status-box hidden"></div>
+    
+    <!-- Hidden form module to cleanly transmit data cross-origin without triggering CORS blocks -->
+    <form id="hidden-google-form" method="POST" target="hidden-iframe" class="hidden">
+      <input type="hidden" name="payload" id="hidden-payload-field">
+    </form>
+    <iframe name="hidden-iframe" id="hidden-iframe" class="hidden"></iframe>
   </main>
 
   <script src="js/storage.js"></script>
@@ -104,7 +97,6 @@
         document.getElementById('manual-form').addEventListener('submit', handleManualSave);
     });
 
-    // Toggle logic tracking page layout configurations
     function switchView(mode) {
         if(mode === 'ai') {
             document.getElementById('toggle-ai').classList.add('active');
@@ -182,20 +174,21 @@
             uploader: currentUploader
         };
 
-        // Save placeholder item right to her browser memory
         saveRecipe(temporaryLocalBackup);
 
         try {
-            // FIXED: Hand raw text payload across with standard cross-origin adjustments 
-            // completely resolving the background submission loop blocks
-            await fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain" }, 
-                body: JSON.stringify({ 
-                    recipeText: inputData,
-                    uploaderName: currentUploader
-                })
+            // Package payload data cleanly inside our hidden form router 
+            const form = document.getElementById('hidden-google-form');
+            const field = document.getElementById('hidden-payload-field');
+            
+            form.action = APP_CONFIG.GOOGLE_BRIDGE_URL;
+            field.value = JSON.stringify({ 
+                recipeText: inputData,
+                uploaderName: currentUploader
             });
+
+            // Execute submission event completely cross-origin with no CORS network barriers
+            form.submit();
 
             updateStatus("🚀 Recipe added! It has been placed in 'My Collection' temporarily and will finish parsing into 'Explore Community' in roughly 15-20 seconds.", "success");
             inputField.value = "";
@@ -205,7 +198,6 @@
         }
     }
 
-    // Interactive notification label display states
     function updateStatus(msg, statusType) {
         const box = document.getElementById('status-message');
         box.innerText = msg;
