@@ -145,7 +145,6 @@
 
         updateStatus("AI is reading and parsing your recipe directly inside the browser...", "loading");
 
-        // FIXED: Combined stable endpoint path string utilizing the formatting-proof word blocks
         const baseEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
         const endpoint = baseEndpoint + GEMINI_SECRET_KEY;
         
@@ -154,7 +153,11 @@
         try {
             const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                // FIXED: Expanded header rules to include Google's mandatory client parameter tags
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-goog-api-client': 'gl-js/rest'
+                },
                 body: JSON.stringify({
                     contents: [{
                         parts: [{
@@ -170,13 +173,11 @@
 
             const data = await response.json();
             
-            // Extract content data safely right out of the structured container
             const rawJsonText = data.candidates[0].content.parts[0].text.trim();
             const parsedRecipe = JSON.parse(rawJsonText.replace(/```json|```/g, ''));
             
             parsedRecipe.uploader = currentUploader;
 
-            // Save straight to browser memory storage natively
             saveRecipe(parsedRecipe);
 
             updateStatus("🎉 Successfully added \"" + parsedRecipe.title + "\" straight to your collection!", "success");
