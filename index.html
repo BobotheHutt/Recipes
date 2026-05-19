@@ -18,15 +18,12 @@
     
     <!-- Inline Controls Dropdowns -->
     <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
-      <!-- Profile Picker Dropdown -->
-      <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer;">
-        <option value="Guest">👤 Guest</option>
-        <option value="Wife">👩 Wife</option>
-        <option value="Husband">👨 Husband</option>
+      <!-- FIXED: Empty profile selector block so js/themes.js can control initialization at page load -->
+      <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
       </select>
 
       <!-- Theme Picker Dropdown -->
-      <select id="theme-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer;">
+      <select id="theme-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
         <option value="light">☀️ Light Emerald</option>
         <option value="dark">🌙 Dark Slate</option>
         <option value="sepia">🍂 Cozy Sepia</option>
@@ -134,7 +131,7 @@
             const card = document.createElement('div');
             card.className = 'recipe-card';
             
-            const authorTag = recipe.uploader ? `👤 Added by: ${recipe.uploader}` : '👤 Added by: Me';
+            const authorTag = recipe.uploader ? `👤 Added by: ${recipe.uploader}` : '👤 Added by: Guest';
 
             card.innerHTML = `
                 <div class="card-header">
@@ -238,7 +235,7 @@
             ingredients: ingLines,
             instructions: instLines,
             sourceUrl: originalRecipe.sourceUrl, 
-            uploader: originalRecipe.uploader || 'Me' 
+            uploader: originalRecipe.uploader || 'Guest' 
         };
 
         privateRecipes[activeEditingIndex] = updatedRecipe;
@@ -246,10 +243,9 @@
         renderPrivateRecipes();
         document.getElementById('edit-modal').classList.add('hidden');
 
-        // Dynamically references the centralized global constant from js/config.js
-        if (updatedRecipe.sourceUrl && typeof GOOGLE_BRIDGE_URL !== 'undefined') {
+        if (updatedRecipe.sourceUrl && typeof APP_CONFIG !== 'undefined') {
             try {
-                fetch(GOOGLE_BRIDGE_URL, {
+                fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
                     method: "POST",
                     mode: "no-cors",
                     headers: { "Content-Type": "application/json" },
