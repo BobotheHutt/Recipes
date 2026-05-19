@@ -16,15 +16,14 @@
     <a href="explore.html" class="nav-link">Explore Community</a>
     <a href="collection.html" class="nav-link active">Add Recipes</a>
     
-    <!-- Unified Controls Selection Block Group -->
+    <!-- Inline Controls Dropdowns -->
     <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
-      <!-- Profile Picker Dropdown -->
-      <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer;">
-        <!-- Filled dynamically by js/themes.js -->
+      <!-- FIXED: Empty profile selector block so js/themes.js handles rendering cleanly at page load -->
+      <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
       </select>
 
       <!-- Theme Picker Dropdown -->
-      <select id="theme-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer;">
+      <select id="theme-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
         <option value="light">☀️ Light Emerald</option>
         <option value="dark">🌙 Dark Slate</option>
         <option value="sepia">🍂 Cozy Sepia</option>
@@ -182,11 +181,9 @@
             uploader: currentUploader
         };
 
-        // 1. Save instantly to her device collection local cache folder
         saveRecipe(temporaryLocalBackup);
 
         try {
-            // 2. Simultaneously send out to global background Google infrastructure
             await fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
                 method: "POST",
                 mode: "no-cors", 
@@ -197,8 +194,7 @@
                 })
             });
 
-            // FIXED: Fixed notice text typo to read cleanly
-            updateStatus("🚀 Recipe added! It has been placed in 'My Collection' temporarily and will finish parsing into 'Explore Community' in roughly 15-20 seconds.", "success");
+            updateStatus("🚀 Recipe added! It has been placed in 'My Collection' temporarily and will finish parsing in 'Explore Community' in roughly 15-20 seconds.", "success");
             inputField.value = "";
         } catch (error) {
             console.error(error);
