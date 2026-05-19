@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Explore Community Recipes</title>
   <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js" defer></script>
   <script src="js/themes.js" defer></script>
 </head>
 <body>
@@ -15,17 +16,14 @@
     <a href="explore.html" class="nav-link active">Explore Community</a>
     <a href="collection.html" class="nav-link">Add Recipes</a>
     
-    <!-- Unified Controls Selection Block Group -->
+    <!-- Inline Controls Dropdowns -->
     <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
-      <!-- Profile Picker Dropdown -->
-      <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer;">
-        <option value="Guest">👤 Guest</option>
-        <option value="Wife">👩 Wife</option>
-        <option value="Husband">👨 Husband</option>
+      <!-- FIXED: Empty profile selector block so js/themes.js handles rendering cleanly -->
+      <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
       </select>
 
       <!-- Theme Picker Dropdown -->
-      <select id="theme-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer;">
+      <select id="theme-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
         <option value="light">☀️ Light Emerald</option>
         <option value="dark">🌙 Dark Slate</option>
         <option value="sepia">🍂 Cozy Sepia</option>
@@ -67,7 +65,6 @@
         setupInterfaceActions();
     });
 
-    // Main layout rendering function
     function renderCommunityRecipes() {
         const grid = document.getElementById('global-grid');
         const searchKeyword = document.getElementById('search-bar').value.toLowerCase().trim();
@@ -92,8 +89,7 @@
             const card = document.createElement('div');
             card.className = 'recipe-card';
             
-            // Generate clean creator attribution label
-            const authorTag = recipe.uploader ? `👤 Added by: ${recipe.uploader}` : '👤 Added by: Community';
+            const authorTag = recipe.uploader ? `👤 Added by: ${recipe.uploader}` : '👤 Added by: Guest';
 
             card.innerHTML = `
                 <div class="card-header">
