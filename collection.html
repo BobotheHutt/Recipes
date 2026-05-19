@@ -145,26 +145,16 @@
 
         updateStatus("AI is reading and parsing your recipe directly inside the browser...", "loading");
 
-        // Your verified working address link string
-        const baseEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key=';
+        // FIXED: Combined stable endpoint path string utilizing the formatting-proof word blocks
+        const baseEndpoint = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=';
         const endpoint = baseEndpoint + GEMINI_SECRET_KEY;
         
-        const promptText = `Analyze this recipe text or URL. Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra conversational text:
-        {
-          "title": "Recipe Name",
-          "category": "Breakfast/Lunch/Dinner/Dessert/Snack",
-          "prepTime": "X mins",
-          "ingredients": ["item 1", "item 2"],
-          "instructions": ["step 1", "step 2"],
-          "sourceUrl": "URL if applicable"
-        }
-        Recipe context: ${inputData}`;
+        const promptText = "Analyze this recipe text or URL: " + inputData + " . Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra conversational text:\n{\n  \"title\": \"Recipe Name\",\n  \"category\": \"Breakfast/Lunch/Dinner/Dessert/Snack\",\n  \"prepTime\": \"X mins\",\n  \"ingredients\": [\"item 1\", \"item 2\"],\n  \"instructions\": [\"step 1\", \"step 2\"],\n  \"sourceUrl\": \"URL if applicable\"\n}";
 
         try {
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // FIXED: Wrapped payload contents inside Google's mandatory structural schema format layers
                 body: JSON.stringify({
                     contents: [{
                         parts: [{
@@ -174,20 +164,22 @@
                 })
             });
 
-            if (!response.ok) throw new Error("API call failed");
+            if (!response.ok) {
+                throw new Error("API call failed with status: " + response.status);
+            }
 
             const data = await response.json();
             
-            // Extract the text output block right out of Google's response tree schema
+            // Extract content data safely right out of the structured container
             const rawJsonText = data.candidates[0].content.parts[0].text.trim();
             const parsedRecipe = JSON.parse(rawJsonText.replace(/```json|```/g, ''));
             
             parsedRecipe.uploader = currentUploader;
 
-            // Commit card straight to device storage array folder natively
+            // Save straight to browser memory storage natively
             saveRecipe(parsedRecipe);
 
-            updateStatus(`🎉 Successfully added "${parsedRecipe.title}" straight to your collection!`, "success");
+            updateStatus("🎉 Successfully added \"" + parsedRecipe.title + "\" straight to your collection!", "success");
             inputField.value = "";
         } catch (error) {
             console.error(error);
