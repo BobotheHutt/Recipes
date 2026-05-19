@@ -5,30 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Recipe Collection</title>
   <link rel="stylesheet" href="css/style.css">
+  <!-- Shared settings, themes, and profile modular script tags -->
   <script src="js/config.js" defer></script>
   <script src="js/themes.js" defer></script>
+  <script src="js/profiles.js" defer></script>
 </head>
 <body>
 
-  <!-- Navigation Bar -->
+  <!-- Navigation Bar (Shared Selectors will auto-inject right inside here) -->
   <nav class="navbar">
     <a href="index.html" class="nav-link active">My Collection</a>
     <a href="explore.html" class="nav-link">Explore Community</a>
     <a href="collection.html" class="nav-link">Add Recipes</a>
-    
-    <!-- Inline Controls Dropdowns -->
-    <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
-      <!-- FIXED: Empty profile selector block so js/themes.js can control initialization at page load -->
-      <select id="profile-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
-      </select>
-
-      <!-- Theme Picker Dropdown -->
-      <select id="theme-select" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;">
-        <option value="light">☀️ Light Emerald</option>
-        <option value="dark">🌙 Dark Slate</option>
-        <option value="sepia">🍂 Cozy Sepia</option>
-      </select>
-    </div>
   </nav>
 
   <main class="container">
