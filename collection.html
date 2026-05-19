@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Add Recipes</title>
   <link rel="stylesheet" href="css/style.css">
-  <!-- Shared settings, themes, profiles, and your hidden local key file -->
-  <script src="js/api-key.js" defer></script>
+  <!-- Central settings map and modular global dropdown logic elements -->
+  <script src="js/config.js" defer></script>
   <script src="js/themes.js" defer></script>
   <script src="js/profiles.js" defer></script>
 </head>
@@ -88,7 +88,7 @@
         document.getElementById('toggle-ai').addEventListener('click', () => switchView('ai'));
         document.getElementById('toggle-manual').addEventListener('click', () => switchView('manual'));
 
-        document.getElementById('submit-btn').addEventListener('click', handleDirectAIProcessing);
+        document.getElementById('submit-btn').addEventListener('click', handleCloudflareAIProcessing);
         document.getElementById('manual-form').addEventListener('submit', handleManualSave);
     });
 
@@ -128,7 +128,7 @@
         document.getElementById('manual-form').reset();
     }
 
-    async function handleDirectAIProcessing() {
+    async function handleCloudflareAIProcessing() {
         const inputField = document.getElementById('recipe-input');
         const inputData = inputField.value.trim();
         const currentUploader = localStorage.getItem('uploader_name') || 'Guest';
@@ -138,53 +138,40 @@
             return;
         }
 
-        if (typeof GEMINI_SECRET_KEY === 'undefined' || !GEMINI_SECRET_KEY) {
-            showAlert("Secret key missing. Make sure your local js/api-key.js file exists.", "error");
+        // Safety block confirming our centralized cloud coordinates exist on page load
+        if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.CLOUDFLARE_BRIDGE_URL) {
+            showAlert("Configuration file error. Missing central layout coordinate mappings.", "error");
             return;
         }
 
-        updateStatus("AI is reading and parsing your recipe directly inside the browser...", "loading");
-
-        const baseEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
-        const endpoint = baseEndpoint + GEMINI_SECRET_KEY;
-        
-        const promptText = "Analyze this recipe text or URL: " + inputData + " . Extract the details into a strict JSON format matching this exact structure, with no markdown formatting or extra conversational text:\n{\n  \"title\": \"Recipe Name\",\n  \"category\": \"Breakfast/Lunch/Dinner/Dessert/Snack\",\n  \"prepTime\": \"X mins\",\n  \"ingredients\": [\"item 1\", \"item 2\"],\n  \"instructions\": [\"step 1\", \"step 2\"],\n  \"sourceUrl\": \"URL if applicable\"\n}";
+        updateStatus("Cloudflare secure bridge is processing your link through AI...", "loading");
 
         try {
-            const response = await fetch(endpoint, {
+            // Dynamically references your custom cloud gateway address map parameter
+            const response = await fetch(APP_CONFIG.CLOUDFLARE_BRIDGE_URL, {
                 method: 'POST',
-                // FIXED: Expanded header rules to include Google's mandatory client parameter tags
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'x-goog-api-client': 'gl-js/rest'
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: promptText
-                        }]
-                    }]
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ recipeText: inputData })
             });
 
-            if (!response.ok) {
-                throw new Error("API call failed with status: " + response.status);
-            }
+            if (!response.ok) throw new Error("Cloudflare secure bridge rejected the request handshake.");
 
             const data = await response.json();
             
-            const rawJsonText = data.candidates[0].content.parts[0].text.trim();
+            // Extract nested string data safely straight out of Cloudflare's transit envelope
+            const rawJsonText = data.candidates.content.parts.text.trim();
             const parsedRecipe = JSON.parse(rawJsonText.replace(/```json|```/g, ''));
             
             parsedRecipe.uploader = currentUploader;
 
+            // Commit structured metadata card natively directly to her private local array folder
             saveRecipe(parsedRecipe);
 
             updateStatus("🎉 Successfully added \"" + parsedRecipe.title + "\" straight to your collection!", "success");
             inputField.value = "";
         } catch (error) {
             console.error(error);
-            updateStatus("AI extraction failed. Check link structure or key availability.", "error");
+            updateStatus("Cloudflare extraction failed. Verify dashboard variable permissions or log streams.", "error");
         }
     }
 
