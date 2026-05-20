@@ -3,6 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    // Apply saved theme's background instantly, before the stylesheet loads,
+    // so reloading a page never flashes a white screen.
+    (function () {
+      var t = localStorage.getItem('site_theme') || 'light';
+      var bg = { light: '#f9fafb', dark: '#0f172a', sepia: '#f4eae1' }[t] || '#f9fafb';
+      document.documentElement.style.backgroundColor = bg;
+      document.body && (document.body.style.backgroundColor = bg);
+    })();
+  </script>
   <title>Explore Community Recipes</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="css/style.css">
