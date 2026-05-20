@@ -432,11 +432,14 @@ async function initAdmin() {
     }
 
     // Reset dropdown — exclude the built-in Admin account (its password is the secret)
-    const select = document.getElementById('reset-account');
-    select.innerHTML = adminAccounts
-        .filter(a => a.username.toLowerCase() !== 'admin')
+    const nonAdmin = adminAccounts.filter(a => a.username.toLowerCase() !== 'admin');
+    const optionsHtml = nonAdmin
         .map(a => `<option value="${escapeHtml(a.username)}">${escapeHtml(a.username)}</option>`)
         .join('');
+
+    document.getElementById('reset-account').innerHTML = optionsHtml;
+    document.getElementById('rename-account').innerHTML = optionsHtml;
+    document.getElementById('delete-account').innerHTML = optionsHtml;
 
     const grid = document.getElementById('account-list');
     if (adminAccounts.length === 0) {
@@ -473,6 +476,58 @@ async function initAdmin() {
             if (!res.ok) throw new Error(data.error || 'Reset failed');
             showStatus(`Password for "${targetUsername}" is now: ${newPassword}`, "success");
             document.getElementById('reset-password').value = '';
+        } catch (e) {
+            showStatus(e.message, "error");
+        }
+    });
+
+    document.getElementById('rename-btn').addEventListener('click', async () => {
+        const oldUsername = document.getElementById('rename-account').value;
+        const newUsername = document.getElementById('rename-newname').value.trim();
+        if (!oldUsername) { showStatus("Pick an account.", "error"); return; }
+        if (!newUsername) { showStatus("Enter a new name.", "error"); return; }
+        if (!confirm(`Rename "${oldUsername}" to "${newUsername}"? They'll need to log in again with the new name.`)) return;
+
+        showStatus("Renaming...", "loading");
+        try {
+            const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/admin/rename-account`, {
+                method: 'POST',
+                headers: AUTH.headers({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ oldUsername, newUsername })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Rename failed');
+            showStatus(`Renamed to "${data.newUsername}". They should log in again with the new name.`, "success");
+            await initAdmin();  // refresh the lists
+        } catch (e) {
+            showStatus(e.message, "error");
+        }
+    });
+
+    document.getElementById('delete-btn').addEventListener('click', async () => {
+        const targetUsername = document.getElementById('delete-account').value;
+        const deleteCommunityRecipes = document.getElementById('delete-community').checked;
+        if (!targetUsername) { showStatus("Pick an account.", "error"); return; }
+
+        const extra = deleteCommunityRecipes
+            ? "Their community recipes will ALSO be deleted."
+            : "Their community recipes will stay (under their name).";
+        if (!confirm(`Delete account "${targetUsername}"?\n\n${extra}\n\nThis cannot be undone.`)) return;
+
+        showStatus("Deleting...", "loading");
+        try {
+            const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/admin/delete-account`, {
+                method: 'POST',
+                headers: AUTH.headers({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ targetUsername, deleteCommunityRecipes })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Delete failed');
+            const note = deleteCommunityRecipes
+                ? ` ${data.deletedCommunityRecipes} community recipe(s) removed.`
+                : '';
+            showStatus(`Account "${targetUsername}" deleted.${note}`, "success");
+            await initAdmin();  // refresh the lists
         } catch (e) {
             showStatus(e.message, "error");
         }

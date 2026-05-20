@@ -37,6 +37,10 @@ export default {
         return await handleAdminAccounts(request, env, corsHeaders);
       if (path === "/admin/reset-password" && method === "POST")
         return await handleAdminResetPassword(request, env, corsHeaders);
+      if (path === "/admin/delete-account" && method === "POST")
+        return await handleAdminDeleteAccount(request, env, corsHeaders);
+      if (path === "/admin/rename-account" && method === "POST")
+        return await handleAdminRenameAccount(request, env, corsHeaders);
 
       // ---- AI parsing ----
       if (path === "/parse" && method === "POST")
@@ -323,6 +327,101 @@ async function handleAdminResetPassword(request, env, corsHeaders) {
   return jsonResponse({ ok: true }, 200, corsHeaders);
 }
 
+async function handleAdminDeleteAccount(request, env, corsHeaders) {
+  const account = await authenticate(request, env);
+  if (!account) return unauthorized(corsHeaders);
+  if (!account.isAdmin) return jsonResponse({ error: "Admin only" }, 403, corsHeaders);
+
+  const { targetUsername, deleteCommunityRecipes } = await request.json();
+  if (!targetUsername)
+    return jsonResponse({ error: "No target account given" }, 400, corsHeaders);
+
+  if (targetUsername.toLowerCase() === ADMIN_USERNAME.toLowerCase())
+    return jsonResponse({ error: "The Admin account cannot be deleted." }, 400, corsHeaders);
+
+  const target = await getAccount(env, targetUsername);
+  if (!target) return jsonResponse({ error: "No such account" }, 404, corsHeaders);
+
+  // Remove the account record and its personal recipe collection
+  await env.RECIPES_KV.delete("account:" + targetUsername);
+  await env.RECIPES_KV.delete("userrecipes:" + targetUsername);
+
+  // Remove from the account index
+  let index = await getAccountIndex(env);
+  index = index.filter((n) => n !== targetUsername);
+  await saveAccountIndex(env, index);
+
+  // Optionally remove that account's community recipes
+  let removedCommunity = 0;
+  if (deleteCommunityRecipes) {
+    const recipes = await readCommunity(env);
+    const kept = recipes.filter((r) => r.uploader !== targetUsername);
+    removedCommunity = recipes.length - kept.length;
+    await writeCommunity(env, kept);
+  }
+
+  return jsonResponse(
+    { ok: true, deletedCommunityRecipes: removedCommunity },
+    200, corsHeaders
+  );
+}
+
+async function handleAdminRenameAccount(request, env, corsHeaders) {
+  const account = await authenticate(request, env);
+  if (!account) return unauthorized(corsHeaders);
+  if (!account.isAdmin) return jsonResponse({ error: "Admin only" }, 403, corsHeaders);
+
+  const { oldUsername, newUsername } = await request.json();
+  const oldName = (oldUsername || "").trim();
+  const newName = (newUsername || "").trim();
+
+  if (!oldName || !newName)
+    return jsonResponse({ error: "Need both the current and new name" }, 400, corsHeaders);
+  if (newName.length > 30)
+    return jsonResponse({ error: "New name is too long" }, 400, corsHeaders);
+  if (oldName.toLowerCase() === ADMIN_USERNAME.toLowerCase() ||
+      newName.toLowerCase() === ADMIN_USERNAME.toLowerCase())
+    return jsonResponse({ error: "The Admin account cannot be renamed." }, 400, corsHeaders);
+
+  const target = await getAccount(env, oldName);
+  if (!target) return jsonResponse({ error: "No account with that name" }, 404, corsHeaders);
+
+  if (oldName !== newName) {
+    const clash = await getAccount(env, newName);
+    if (clash) return jsonResponse({ error: "That new name is already taken" }, 409, corsHeaders);
+  }
+
+  // Move the account record under the new key
+  target.username = newName;
+  await env.RECIPES_KV.put("account:" + newName, JSON.stringify(target));
+  if (oldName !== newName) await env.RECIPES_KV.delete("account:" + oldName);
+
+  // Move the personal recipe collection
+  const myRecipesRaw = await env.RECIPES_KV.get("userrecipes:" + oldName);
+  await env.RECIPES_KV.put("userrecipes:" + newName, myRecipesRaw || "[]");
+  if (oldName !== newName) await env.RECIPES_KV.delete("userrecipes:" + oldName);
+
+  // Update the account index
+  let index = await getAccountIndex(env);
+  index = index.filter((n) => n !== oldName);
+  if (!index.includes(newName)) index.push(newName);
+  await saveAccountIndex(env, index);
+
+  // Re-stamp this person's community recipes with the new name
+  const recipes = await readCommunity(env);
+  let changed = false;
+  recipes.forEach((r) => {
+    if (r.uploader === oldName) { r.uploader = newName; changed = true; }
+  });
+  if (changed) await writeCommunity(env, recipes);
+
+  // Any active login tokens for the old name still point to it; invalidate
+  // them is overkill — instead the token maps to a username string, so we
+  // leave existing sessions to expire. The renamed user can log in fresh.
+
+  return jsonResponse({ ok: true, newUsername: newName }, 200, corsHeaders);
+}
+
 // ==========================================================================
 // Number / fraction cleanup
 // ==========================================================================
@@ -381,15 +480,26 @@ function looksLikeUrl(text) {
 async function extractRecipeContentFromUrl(pageUrl) {
   let response;
   try {
-    response = await fetch(pageUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml",
-      },
-      redirect: "follow",
-    });
+    // Abort the fetch if the site takes too long, so the worker never hangs.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+      response = await fetch(pageUrl, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml",
+        },
+        redirect: "follow",
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
   } catch (e) {
+    if (e.name === "AbortError") {
+      throw new Error("That site took too long to respond. Try copying and pasting the recipe text instead.");
+    }
     throw new Error("Could not reach that URL. Try copying and pasting the recipe text instead.");
   }
   if (!response.ok) {
@@ -552,18 +662,51 @@ async function handleParse(request, env, corsHeaders) {
     contentForAI;
 
   const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
     apiKey;
 
-  const googleResponse = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }),
-  });
+  const geminiBody = JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] });
 
-  if (!googleResponse.ok) {
-    const errorText = await googleResponse.text();
-    return jsonResponse({ error: "Gemini API rejected the request", details: errorText }, googleResponse.status, corsHeaders);
+  // Call Gemini, retrying once on transient errors (503/429/500).
+  let googleResponse;
+  let lastErrorText = "";
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
+    try {
+      googleResponse = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: geminiBody,
+        signal: controller.signal,
+      });
+    } catch (e) {
+      lastErrorText = e.name === "AbortError" ? "Gemini timed out" : e.toString();
+      googleResponse = null;
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (googleResponse && googleResponse.ok) break;
+
+    // Decide whether to retry
+    const status = googleResponse ? googleResponse.status : 0;
+    const retryable = !googleResponse || status === 503 || status === 429 || status === 500;
+    if (googleResponse) lastErrorText = await googleResponse.text();
+
+    if (!retryable || attempt === 2) {
+      return jsonResponse(
+        {
+          error: "The AI service is busy or unavailable right now. Please try again in a moment, or paste the recipe text instead.",
+          details: lastErrorText,
+        },
+        503,
+        corsHeaders
+      );
+    }
+
+    // brief backoff before the single retry
+    await new Promise((r) => setTimeout(r, 3000));
   }
 
   const data = await googleResponse.json();

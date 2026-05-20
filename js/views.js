@@ -13,9 +13,15 @@ function escapeHtml(str) {
 // ---- shared recipe card ----
 
 function recipeCardHtml(recipe, actionItemsHtml) {
-    const authorTag = recipe.uploader
-        ? `👤 Added by: ${escapeHtml(recipe.uploader)}`
-        : '👤 Added by: Guest';
+    const who = recipe.uploader ? escapeHtml(recipe.uploader) : 'Guest';
+    let authorTag = `👤 Added by: ${who}`;
+    if (recipe.createdAt) {
+        const d = new Date(recipe.createdAt);
+        if (!isNaN(d)) {
+            const dateStr = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            authorTag += ` · 📅 ${dateStr}`;
+        }
+    }
 
     const showImg = (typeof getShowImages !== 'function') || getShowImages();
     const imageHtml = (showImg && recipe.imageUrl)
@@ -167,6 +173,38 @@ function viewAdmin() {
           <p style="font-size:0.8rem;">The new password is shown as plain text so you can read it back to the person.</p>
           <div class="actions">
             <button id="reset-btn" class="primary-btn">Reset Password</button>
+          </div>
+        </div>
+
+        <div class="input-card" style="margin-top:24px;">
+          <h3 style="margin-bottom:16px;">Rename an Account</h3>
+          <div class="form-group">
+            <label>Account</label>
+            <select id="rename-account"></select>
+          </div>
+          <div class="form-group">
+            <label>New Name</label>
+            <input type="text" id="rename-newname" placeholder="e.g., John" maxlength="30">
+          </div>
+          <p style="font-size:0.8rem;">The account keeps its password and recipes. The person will need to log in again with the new name afterwards.</p>
+          <div class="actions">
+            <button id="rename-btn" class="primary-btn">Rename Account</button>
+          </div>
+        </div>
+
+        <div class="input-card" style="margin-top:24px;">
+          <h3 style="margin-bottom:16px;">Delete an Account</h3>
+          <div class="form-group">
+            <label>Account</label>
+            <select id="delete-account"></select>
+          </div>
+          <div class="settings-row" style="padding:4px 0;">
+            <label for="delete-community">Also delete this person's community recipes</label>
+            <input type="checkbox" id="delete-community">
+          </div>
+          <p style="font-size:0.8rem;">If unchecked, their shared recipes stay in the community under their name. Their personal collection is always removed. This cannot be undone.</p>
+          <div class="actions">
+            <button id="delete-btn" class="danger-btn">Delete Account</button>
           </div>
         </div>
 
