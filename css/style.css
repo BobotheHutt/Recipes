@@ -498,3 +498,25 @@ body.theme-dark .status-box.error { background: #7f1d1d; color: #fca5a5; }
   details > summary::-webkit-details-marker { display:none; }
   details:not([open]) > * { display: block !important; }
 }
+/* ==========================================================================
+   11. CARD HEADER — wrap buttons cleanly when several are present (admin mode)
+   ========================================================================== */
+.card-header {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.card-header .badge {
+  margin-right: auto;   /* badge stays left, buttons group to the right */
+}
+
+.card-header button {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+/* keep the print button from forcing its own full-width row */
+.card-header .print-btn {
+  margin-right: 0;
+}
