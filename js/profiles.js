@@ -4,15 +4,12 @@ function initializeProfileDropdown() {
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
 
-    // Check if the dropdown already exists to prevent duplicate injections
     if (document.getElementById('profile-select')) return;
 
-    // 1. Build and append the profile select dropdown dynamically into the navigation bar
     const profileSelect = document.createElement('select');
     profileSelect.id = 'profile-select';
     profileSelect.style.cssText = 'margin-left: auto; padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); cursor: pointer; outline: none;';
-    
-    // Put it right before the theme selector box if the theme box is already attached to the navbar
+
     const themeSelect = document.getElementById('theme-select');
     if (themeSelect && themeSelect.parentNode) {
         themeSelect.parentNode.insertBefore(profileSelect, themeSelect);
@@ -20,10 +17,8 @@ function initializeProfileDropdown() {
         navbar.appendChild(profileSelect);
     }
 
-    // 2. Build the pop-up name input modal window container invisibly inside the page body
     createProfileModalMarkup();
 
-    // 3. Set up the baseline data structures inside your browser memory cache
     if (!localStorage.getItem('uploader_name')) {
         localStorage.setItem('uploader_name', 'Guest');
     }
@@ -31,11 +26,9 @@ function initializeProfileDropdown() {
         localStorage.setItem('site_profiles', JSON.stringify([]));
     }
 
-    // 4. Render options structure tree layout array data
     renderProfileOptions(profileSelect);
 
-    // 5. Setup dynamic selection menu click triggers
-    profileSelect.addEventListener('change', (e) => {
+    profileSelect.addEventListener('change', async (e) => {
         const selection = e.target.value;
 
         if (selection === 'ADD_NEW_PROFILE_ACTION') {
@@ -45,8 +38,15 @@ function initializeProfileDropdown() {
                 document.getElementById('new-profile-name-input').focus();
             }
             profileSelect.value = localStorage.getItem('uploader_name') || "Guest";
+        } else if (selection === 'ADMIN_LOGIN_ACTION') {
+            await handleAdminLogin(profileSelect);
         } else {
+            // Switching to a non-admin profile clears any admin session
+            if (sessionStorage.getItem('admin_password')) {
+                sessionStorage.removeItem('admin_password');
+            }
             localStorage.setItem('uploader_name', selection);
+            renderProfileOptions(profileSelect);
             triggerPageGridUpdates();
         }
     });
@@ -54,7 +54,37 @@ function initializeProfileDropdown() {
     setupProfileModalActions(profileSelect);
 }
 
-// Ensure the code fires regardless of script tag loading speeds
+async function handleAdminLogin(profileSelect) {
+    const previous = localStorage.getItem('uploader_name') || 'Guest';
+    const password = prompt("Enter admin password:");
+
+    if (!password) {
+        profileSelect.value = previous;
+        return;
+    }
+
+    try {
+        const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/admin/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+
+        if (response.ok) {
+            sessionStorage.setItem('admin_password', password);
+            localStorage.setItem('uploader_name', 'Admin');
+            renderProfileOptions(profileSelect);
+            triggerPageGridUpdates();
+        } else {
+            alert("Wrong password.");
+            profileSelect.value = previous;
+        }
+    } catch (err) {
+        alert("Couldn't reach the server to verify the password: " + err.message);
+        profileSelect.value = previous;
+    }
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeProfileDropdown);
 } else {
@@ -63,21 +93,30 @@ if (document.readyState === 'loading') {
 
 function renderProfileOptions(selectEl) {
     const savedActiveName = localStorage.getItem('uploader_name') || 'Guest';
+    const adminActive = !!sessionStorage.getItem('admin_password');
     const profilesList = JSON.parse(localStorage.getItem('site_profiles')) || [];
-    
+
+    // If profile is "Admin" but session was cleared (e.g. browser closed), drop back to Guest
+    if (savedActiveName === 'Admin' && !adminActive) {
+        localStorage.setItem('uploader_name', 'Guest');
+    }
+
+    const activeName = localStorage.getItem('uploader_name') || 'Guest';
+
     selectEl.innerHTML = `
-        <option value="Guest" ${savedActiveName === 'Guest' ? 'selected' : ''}>👤 Guest</option>
-        ${profilesList.map(name => `<option value="${name}" ${savedActiveName === name ? 'selected' : ''}>👤 ${name}</option>`).join('')}
+        <option value="Guest" ${activeName === 'Guest' ? 'selected' : ''}>👤 Guest</option>
+        ${profilesList.map(name => `<option value="${name}" ${activeName === name ? 'selected' : ''}>👤 ${name}</option>`).join('')}
         <option value="ADD_NEW_PROFILE_ACTION" style="font-weight: 600; color: var(--primary);">➕ Add New Profile</option>
+        <option value="ADMIN_LOGIN_ACTION" ${activeName === 'Admin' ? 'selected' : ''} style="font-weight: 600;">${activeName === 'Admin' ? '🔐 Admin (active)' : '🔐 Admin Mode'}</option>
     `;
 }
 
 function createProfileModalMarkup() {
     if (document.getElementById('custom-profile-modal')) return;
-    
+
     const modalDiv = document.createElement('div');
     modalDiv.id = 'custom-profile-modal';
-    
+
     modalDiv.style.position = 'fixed';
     modalDiv.style.top = '0';
     modalDiv.style.left = '0';
@@ -85,7 +124,7 @@ function createProfileModalMarkup() {
     modalDiv.style.height = '100%';
     modalDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
     modalDiv.style.backdropFilter = 'blur(4px)';
-    modalDiv.style.display = 'none'; 
+    modalDiv.style.display = 'none';
     modalDiv.style.justifyContent = 'center';
     modalDiv.style.alignItems = 'center';
     modalDiv.style.zIndex = '9999';
@@ -121,7 +160,13 @@ function setupProfileModalActions(profileSelectEl) {
 
     saveBtn.addEventListener('click', () => {
         const cleanName = input.value.trim();
-        if (!cleanName || cleanName.toLowerCase() === 'guest') return;
+        if (!cleanName) return;
+
+        const lower = cleanName.toLowerCase();
+        if (lower === 'guest' || lower === 'admin') {
+            alert("That profile name is reserved. Try another.");
+            return;
+        }
 
         const currentProfiles = JSON.parse(localStorage.getItem('site_profiles')) || [];
         if (!currentProfiles.includes(cleanName)) {
@@ -129,6 +174,8 @@ function setupProfileModalActions(profileSelectEl) {
             localStorage.setItem('site_profiles', JSON.stringify(currentProfiles));
         }
 
+        // Switching profile clears any admin session
+        sessionStorage.removeItem('admin_password');
         localStorage.setItem('uploader_name', cleanName);
         renderProfileOptions(profileSelectEl);
         triggerPageGridUpdates();

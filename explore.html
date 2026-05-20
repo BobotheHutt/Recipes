@@ -35,12 +35,55 @@
     </div>
 
     <div id="global-grid" class="recipe-grid"></div>
+
+    <!-- Admin edit modal (hidden unless admin mode is active and user clicks Edit) -->
+    <div id="edit-modal" class="modal-overlay hidden">
+      <div class="modal-content" style="max-width: 650px; overflow-y: auto; max-height: 85vh;">
+        <h3>📝 Edit Community Recipe (Admin)</h3>
+        <p style="margin-bottom: 16px; font-size: 0.85rem;">Editing this community recipe as Admin. Changes go directly to the community.</p>
+
+        <form id="edit-form">
+          <div class="form-group">
+            <label>Recipe Title</label>
+            <input type="text" id="edit-title" required>
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="edit-category">
+              <option value="Dinner">Dinner</option>
+              <option value="Breakfast">Breakfast</option>
+              <option value="Lunch">Lunch</option>
+              <option value="Dessert">Dessert</option>
+              <option value="Snack">Snack</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Preparation Time</label>
+            <input type="text" id="edit-time">
+          </div>
+          <div class="form-group">
+            <label>Ingredients (One item per line)</label>
+            <textarea id="edit-ingredients" rows="5"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Instructions (One step per line)</label>
+            <textarea id="edit-instructions" rows="5"></textarea>
+          </div>
+
+          <div class="modal-actions" style="flex-direction: row; justify-content: flex-end; gap: 8px;">
+            <button type="button" id="close-edit-btn" class="text-btn">Cancel</button>
+            <button type="submit" class="primary-btn">💾 Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </main>
 
   <script src="js/storage.js"></script>
   <script>
     let allGlobalRecipes = [];
     let currentCategory = 'all';
+    let activeEditingId = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
         const grid = document.getElementById('global-grid');
@@ -54,6 +97,7 @@
     function renderCommunityRecipes() {
         const grid = document.getElementById('global-grid');
         const searchKeyword = document.getElementById('search-bar').value.toLowerCase().trim();
+        const adminActive = isAdminMode();
         grid.innerHTML = '';
 
         const filteredRecipes = allGlobalRecipes.filter(recipe => {
@@ -75,11 +119,17 @@
             card.className = 'recipe-card';
             const authorTag = recipe.uploader ? `👤 Added by: ${recipe.uploader}` : '👤 Added by: Guest';
 
+            const adminButtons = adminActive ? `
+                <button class="admin-edit-btn" data-id="${recipe.id}" style="font-size:0.8rem; padding:4px 8px; background:#f0fdfa; color:#0d9488; border:1px solid #99f6e4; border-radius:6px;">✏️ Edit</button>
+                <button class="admin-delete-btn delete-btn" data-id="${recipe.id}">🗑️ Delete</button>
+            ` : '';
+
             card.innerHTML = `
                 <div class="card-header">
                     <span class="badge">${recipe.category}</span>
                     <button class="print-btn" data-id="${recipe.id}">🖨️ Print</button>
                     <button class="save-to-local-btn" data-id="${recipe.id}">📥 Add to Collection</button>
+                    ${adminButtons}
                 </div>
                 <h3>${recipe.title}</h3>
                 <p class="meta-info" style="margin-bottom:4px;">⏱️ Prep: ${recipe.prepTime}</p>
@@ -112,18 +162,21 @@
     function setupInterfaceActions() {
         const grid = document.getElementById('global-grid');
 
-        grid.addEventListener('click', (e) => {
-            if (e.target.classList.contains('print-btn')) {
-                const cardElement = e.target.closest('.recipe-card');
+        grid.addEventListener('click', async (e) => {
+            const target = e.target;
+
+            if (target.classList.contains('print-btn')) {
+                const cardElement = target.closest('.recipe-card');
                 const detailContainer = cardElement.querySelector('details');
                 const originalState = detailContainer.hasAttribute('open');
                 detailContainer.setAttribute('open', '');
                 window.print();
                 if (!originalState) detailContainer.removeAttribute('open');
+                return;
             }
 
-            if (e.target.classList.contains('save-to-local-btn')) {
-                const targetId = e.target.dataset.id;
+            if (target.classList.contains('save-to-local-btn')) {
+                const targetId = target.dataset.id;
                 const recipeObject = allGlobalRecipes.find(r => r.id === targetId);
                 if (!recipeObject) return;
 
@@ -135,8 +188,86 @@
 
                 saveRecipe(recipeObject);
                 alert(`Added "${recipeObject.title}" to your collection!`);
+                return;
+            }
+
+            if (target.classList.contains('admin-edit-btn')) {
+                const targetId = target.dataset.id;
+                const recipe = allGlobalRecipes.find(r => r.id === targetId);
+                if (!recipe) return;
+                openEditModal(recipe);
+                return;
+            }
+
+            if (target.classList.contains('admin-delete-btn')) {
+                const targetId = target.dataset.id;
+                const recipe = allGlobalRecipes.find(r => r.id === targetId);
+                if (!recipe) return;
+
+                if (!confirm(`Delete "${recipe.title}" from the community? This affects all users.`)) return;
+
+                try {
+                    await deleteFromCommunity(recipe.id, recipe.uploader);
+                    allGlobalRecipes = allGlobalRecipes.filter(r => r.id !== recipe.id);
+                    renderCommunityRecipes();
+                } catch (err) {
+                    alert("Couldn't delete: " + err.message);
+                }
+                return;
             }
         });
+
+        document.getElementById('close-edit-btn').addEventListener('click', closeEditModal);
+        document.getElementById('edit-form').addEventListener('submit', handleAdminEditSave);
+    }
+
+    function openEditModal(recipe) {
+        activeEditingId = recipe.id;
+        document.getElementById('edit-title').value = recipe.title;
+        document.getElementById('edit-category').value = recipe.category;
+        document.getElementById('edit-time').value = recipe.prepTime;
+        document.getElementById('edit-ingredients').value = recipe.ingredients.join('\n');
+        document.getElementById('edit-instructions').value = recipe.instructions.join('\n');
+        document.getElementById('edit-modal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-modal').classList.add('hidden');
+        activeEditingId = null;
+    }
+
+    async function handleAdminEditSave(e) {
+        e.preventDefault();
+        if (!activeEditingId) return;
+
+        const original = allGlobalRecipes.find(r => r.id === activeEditingId);
+        if (!original) {
+            closeEditModal();
+            return;
+        }
+
+        const ingLines = document.getElementById('edit-ingredients').value.split('\n').map(l => l.trim()).filter(Boolean);
+        const instLines = document.getElementById('edit-instructions').value.split('\n').map(l => l.trim()).filter(Boolean);
+
+        const updatedRecipe = {
+            ...original,
+            title: document.getElementById('edit-title').value.trim(),
+            category: document.getElementById('edit-category').value,
+            prepTime: document.getElementById('edit-time').value.trim() || 'Unspecified',
+            ingredients: ingLines,
+            instructions: instLines
+        };
+
+        try {
+            const saved = await updateInCommunity(updatedRecipe.id, updatedRecipe);
+            // Update local cache
+            const idx = allGlobalRecipes.findIndex(r => r.id === saved.id);
+            if (idx !== -1) allGlobalRecipes[idx] = saved;
+            renderCommunityRecipes();
+            closeEditModal();
+        } catch (err) {
+            alert("Couldn't save changes: " + err.message);
+        }
     }
   </script>
 </body>

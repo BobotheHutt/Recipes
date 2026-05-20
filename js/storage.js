@@ -29,6 +29,25 @@ function deleteLocalRecipe(index) {
     localStorage.setItem('my_recipes', JSON.stringify(current));
 }
 
+// ---------- Admin helpers ----------
+
+function getAdminPassword() {
+    return sessionStorage.getItem('admin_password');
+}
+
+function isAdminMode() {
+    return !!getAdminPassword();
+}
+
+async function verifyAdminPassword(password) {
+    const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/admin/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+    });
+    return response.ok;
+}
+
 // ---------- Community recipes (via Cloudflare Worker + KV) ----------
 
 async function getGlobalRecipes() {
@@ -56,10 +75,14 @@ async function addToCommunity(recipe) {
 }
 
 async function updateInCommunity(recipeId, updates) {
+    const body = { ...updates };
+    const adminPass = getAdminPassword();
+    if (adminPass) body.adminPassword = adminPass;
+
     const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes/${recipeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
+        body: JSON.stringify(body)
     });
     if (!response.ok) {
         const err = await response.json().catch(() => ({}));
@@ -69,10 +92,14 @@ async function updateInCommunity(recipeId, updates) {
 }
 
 async function deleteFromCommunity(recipeId, uploader) {
+    const body = { uploader };
+    const adminPass = getAdminPassword();
+    if (adminPass) body.adminPassword = adminPass;
+
     const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes/${recipeId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uploader })
+        body: JSON.stringify(body)
     });
     if (!response.ok) {
         const err = await response.json().catch(() => ({}));
