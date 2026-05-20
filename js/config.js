@@ -5,5 +5,5 @@ const APP_CONFIG = {
     CLOUDFLARE_BRIDGE_URL: 'https://recipe-parser.jumprun4112.workers.dev',
     
     // 🧠 NATIVE AI API ROUTE: The raw path text requirements for the Gemini model
-    GEMINI_API_ROUTE: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='
+    GEMINI_API_ROUTE: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key='
 };
