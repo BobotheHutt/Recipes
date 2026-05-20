@@ -6,6 +6,24 @@
   <title>Sign In — Recipe Collection</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .password-wrap { position: relative; }
+    .password-wrap input { padding-right: 48px; width: 100%; }
+    .password-toggle {
+      position: absolute;
+      top: 50%;
+      right: 6px;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 6px 8px;
+      line-height: 1;
+      opacity: 0.65;
+    }
+    .password-toggle:hover { opacity: 1; }
+  </style>
   <script src="js/config.js" defer></script>
   <script src="js/themes.js" defer></script>
   <script src="js/auth.js" defer></script>
@@ -34,7 +52,10 @@
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" id="login-password" placeholder="Your password">
+        <div class="password-wrap">
+          <input type="password" id="login-password" placeholder="Your password">
+          <button type="button" class="password-toggle" data-target="login-password" aria-label="Show password">👁️</button>
+        </div>
       </div>
       <div class="actions">
         <button id="login-btn" class="primary-btn">Sign In</button>
@@ -49,11 +70,17 @@
       </div>
       <div class="form-group">
         <label>Choose a Password</label>
-        <input type="password" id="signup-password" placeholder="At least 4 characters">
+        <div class="password-wrap">
+          <input type="password" id="signup-password" placeholder="At least 4 characters">
+          <button type="button" class="password-toggle" data-target="signup-password" aria-label="Show password">👁️</button>
+        </div>
       </div>
       <div class="form-group">
         <label>Confirm Password</label>
-        <input type="password" id="signup-password2" placeholder="Type it again">
+        <div class="password-wrap">
+          <input type="password" id="signup-password2" placeholder="Type it again">
+          <button type="button" class="password-toggle" data-target="signup-password2" aria-label="Show password">👁️</button>
+        </div>
       </div>
       <p style="font-size:0.8rem;">Tip: please use a simple throwaway password here — not a password you use anywhere important.</p>
       <div class="actions">
@@ -79,6 +106,18 @@
 
         document.getElementById('login-password').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') handleLogin();
+        });
+
+        // Show/hide password eye toggles
+        document.querySelectorAll('.password-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const input = document.getElementById(btn.dataset.target);
+                if (!input) return;
+                const showing = input.type === 'text';
+                input.type = showing ? 'password' : 'text';
+                btn.textContent = showing ? '👁️' : '🙈';
+                btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+            });
         });
 
         await loadAccountList();
