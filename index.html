@@ -45,7 +45,7 @@
     <div id="edit-modal" class="modal-overlay hidden">
       <div class="modal-content" style="max-width: 650px; overflow-y: auto; max-height: 85vh;">
         <h3>📝 Edit Recipe</h3>
-        <p style="margin-bottom: 16px; font-size: 0.85rem;">Modifying a saved recipe will update your device. If it has a source web link, it will auto-sync back to the community collection!</p>
+        <p style="margin-bottom: 16px; font-size: 0.85rem;">Update any field below. Changes are saved to your device only.</p>
         
         <form id="edit-form">
           <div class="form-group">
@@ -207,7 +207,7 @@
         document.getElementById('edit-form').addEventListener('submit', handleRecipeEditsSave);
     }
 
-    async function handleRecipeEditsSave(e) {
+    function handleRecipeEditsSave(e) {
         e.preventDefault();
         if (activeEditingIndex === null) return;
 
@@ -231,27 +231,9 @@
         localStorage.setItem('my_recipes', JSON.stringify(privateRecipes));
         renderPrivateRecipes();
         document.getElementById('edit-modal').classList.add('hidden');
-
-        if (updatedRecipe.sourceUrl && typeof APP_CONFIG !== 'undefined') {
-            try {
-                fetch(APP_CONFIG.GOOGLE_BRIDGE_URL, {
-                    method: "POST",
-                    mode: "no-cors",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ 
-                        recipeText: JSON.stringify(updatedRecipe),
-                        isEditSync: true 
-                    })
-                });
-                alert(`Saved locally! Global community card will update in about 15 seconds.`);
-            } catch (err) {
-                console.error("Global database synchronization event failed:", err);
-            }
-        } else {
-            alert("Recipe updated successfully in your private collection!");
-        }
-        
         activeEditingIndex = null;
+
+        alert("Recipe updated!");
     }
   </script>
 </body>
