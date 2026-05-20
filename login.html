@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — Recipe Collection</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js" defer></script>
+  <script src="js/themes.js" defer></script>
+  <script src="js/auth.js" defer></script>
+</head>
+<body>
+
+  <nav class="navbar">
+    <span class="nav-link active" style="cursor:default;">🍲 Recipe Collection</span>
+  </nav>
+
+  <main class="container" style="max-width: 480px;">
+    <h1>Welcome</h1>
+    <p>Sign in to your account, or create one to get started.</p>
+
+    <!-- Mode toggle -->
+    <div class="toggle-actions" style="margin-top: 24px;">
+      <button id="toggle-login" class="filter-btn active">Sign In</button>
+      <button id="toggle-signup" class="filter-btn">Create Account</button>
+    </div>
+
+    <!-- Sign In -->
+    <div id="login-view" class="input-card">
+      <div class="form-group">
+        <label>Account</label>
+        <select id="login-username"></select>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Your password">
+      </div>
+      <div class="actions">
+        <button id="login-btn" class="primary-btn">Sign In</button>
+      </div>
+    </div>
+
+    <!-- Create Account -->
+    <div id="signup-view" class="input-card hidden">
+      <div class="form-group">
+        <label>Choose a Name</label>
+        <input type="text" id="signup-username" placeholder="e.g., Sarah" maxlength="30">
+      </div>
+      <div class="form-group">
+        <label>Choose a Password</label>
+        <input type="password" id="signup-password" placeholder="At least 4 characters">
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="signup-password2" placeholder="Type it again">
+      </div>
+      <div class="form-group">
+        <label>Admin Code (optional)</label>
+        <input type="password" id="signup-admin" placeholder="Leave blank unless you have one">
+      </div>
+      <p style="font-size:0.8rem;">Tip: please use a simple throwaway password here — not a password you use anywhere important.</p>
+      <div class="actions">
+        <button id="signup-btn" class="primary-btn">Create Account</button>
+      </div>
+    </div>
+
+    <div id="status-message" class="status-box hidden"></div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // If already logged in, skip straight to the collection
+        if (AUTH.getToken()) {
+            window.location.href = 'index.html';
+            return;
+        }
+
+        document.getElementById('toggle-login').addEventListener('click', () => switchMode('login'));
+        document.getElementById('toggle-signup').addEventListener('click', () => switchMode('signup'));
+        document.getElementById('login-btn').addEventListener('click', handleLogin);
+        document.getElementById('signup-btn').addEventListener('click', handleSignup);
+
+        document.getElementById('login-password').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+
+        await loadAccountList();
+    });
+
+    function switchMode(mode) {
+        const loginActive = mode === 'login';
+        document.getElementById('toggle-login').classList.toggle('active', loginActive);
+        document.getElementById('toggle-signup').classList.toggle('active', !loginActive);
+        document.getElementById('login-view').classList.toggle('hidden', !loginActive);
+        document.getElementById('signup-view').classList.toggle('hidden', loginActive);
+        clearStatus();
+    }
+
+    async function loadAccountList() {
+        const select = document.getElementById('login-username');
+        try {
+            const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/auth/accounts`);
+            const names = res.ok ? await res.json() : [];
+            if (names.length === 0) {
+                select.innerHTML = `<option value="">No accounts yet — create one</option>`;
+            } else {
+                select.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('');
+            }
+        } catch (e) {
+            select.innerHTML = `<option value="">Couldn't load accounts</option>`;
+        }
+    }
+
+    async function handleLogin() {
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+
+        if (!username) { showStatus("Pick an account (or create one).", "error"); return; }
+        if (!password) { showStatus("Enter your password.", "error"); return; }
+
+        showStatus("Signing in...", "loading");
+        try {
+            const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Login failed');
+
+            AUTH.setSession(data.token, data.username, data.isAdmin);
+            window.location.href = 'index.html';
+        } catch (e) {
+            showStatus(e.message, "error");
+        }
+    }
+
+    async function handleSignup() {
+        const username = document.getElementById('signup-username').value.trim();
+        const password = document.getElementById('signup-password').value;
+        const password2 = document.getElementById('signup-password2').value;
+        const adminPassword = document.getElementById('signup-admin').value;
+
+        if (!username) { showStatus("Choose a name.", "error"); return; }
+        if (password.length < 4) { showStatus("Password must be at least 4 characters.", "error"); return; }
+        if (password !== password2) { showStatus("The two passwords don't match.", "error"); return; }
+
+        showStatus("Creating your account...", "loading");
+        try {
+            const body = { username, password };
+            if (adminPassword) body.adminPassword = adminPassword;
+
+            const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/auth/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Signup failed');
+
+            AUTH.setSession(data.token, data.username, data.isAdmin);
+            window.location.href = 'index.html';
+        } catch (e) {
+            showStatus(e.message, "error");
+        }
+    }
+
+    function showStatus(msg, type) {
+        const box = document.getElementById('status-message');
+        box.innerText = msg;
+        box.className = `status-box ${type}`;
+    }
+
+    function clearStatus() {
+        document.getElementById('status-message').className = "status-box hidden";
+    }
+  </script>
+</body>
+</html>

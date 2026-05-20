@@ -1,60 +1,55 @@
 // js/storage.js
+// All recipe data lives in the cloud (Cloudflare Worker + KV) and is
+// scoped to the logged-in account. Every call carries the auth token.
 
-// Ensure local storage exists
-if (!localStorage.getItem('my_recipes')) {
-    localStorage.setItem('my_recipes', JSON.stringify([]));
-}
+// ---------- Personal (cloud) recipes ----------
 
-// ---------- Local (per-device) recipes ----------
-
-function getRecipes() {
-    return JSON.parse(localStorage.getItem('my_recipes'));
-}
-
-function saveRecipe(recipeObj) {
-    const current = getRecipes();
-    current.push(recipeObj);
-    localStorage.setItem('my_recipes', JSON.stringify(current));
-}
-
-function updateLocalRecipe(index, recipeObj) {
-    const current = getRecipes();
-    current[index] = recipeObj;
-    localStorage.setItem('my_recipes', JSON.stringify(current));
-}
-
-function deleteLocalRecipe(index) {
-    const current = getRecipes();
-    current.splice(index, 1);
-    localStorage.setItem('my_recipes', JSON.stringify(current));
-}
-
-// ---------- Admin helpers ----------
-
-function getAdminPassword() {
-    return sessionStorage.getItem('admin_password');
-}
-
-function isAdminMode() {
-    return !!getAdminPassword();
-}
-
-async function verifyAdminPassword(password) {
-    const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/admin/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
+async function getMyRecipes() {
+    const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/my-recipes`, {
+        headers: AUTH.headers()
     });
-    return response.ok;
+    if (!res.ok) throw new Error(await errorText(res));
+    return await res.json();
 }
 
-// ---------- Community recipes (via Cloudflare Worker + KV) ----------
+async function addMyRecipe(recipe) {
+    const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/my-recipes`, {
+        method: 'POST',
+        headers: AUTH.headers({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(recipe)
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    return await res.json();
+}
+
+async function updateMyRecipe(id, recipe) {
+    const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/my-recipes/${id}`, {
+        method: 'PUT',
+        headers: AUTH.headers({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(recipe)
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    return await res.json();
+}
+
+async function deleteMyRecipe(id) {
+    const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/my-recipes/${id}`, {
+        method: 'DELETE',
+        headers: AUTH.headers()
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    return true;
+}
+
+// ---------- Community recipes ----------
 
 async function getGlobalRecipes() {
     try {
-        const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes`);
-        if (!response.ok) return [];
-        return await response.json();
+        const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes`, {
+            headers: AUTH.headers()
+        });
+        if (!res.ok) return [];
+        return await res.json();
     } catch (e) {
         console.error("Could not load community recipes:", e);
         return [];
@@ -62,48 +57,41 @@ async function getGlobalRecipes() {
 }
 
 async function addToCommunity(recipe) {
-    const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes`, {
+    const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: AUTH.headers({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(recipe)
     });
-    if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Server returned ${response.status}`);
-    }
-    return await response.json();
+    if (!res.ok) throw new Error(await errorText(res));
+    return await res.json();
 }
 
-async function updateInCommunity(recipeId, updates) {
-    const body = { ...updates };
-    const adminPass = getAdminPassword();
-    if (adminPass) body.adminPassword = adminPass;
-
-    const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes/${recipeId}`, {
+async function updateInCommunity(id, recipe) {
+    const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        headers: AUTH.headers({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(recipe)
     });
-    if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Server returned ${response.status}`);
-    }
-    return await response.json();
+    if (!res.ok) throw new Error(await errorText(res));
+    return await res.json();
 }
 
-async function deleteFromCommunity(recipeId, uploader) {
-    const body = { uploader };
-    const adminPass = getAdminPassword();
-    if (adminPass) body.adminPassword = adminPass;
-
-    const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes/${recipeId}`, {
+async function deleteFromCommunity(id) {
+    const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes/${id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        headers: AUTH.headers()
     });
-    if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Server returned ${response.status}`);
-    }
+    if (!res.ok) throw new Error(await errorText(res));
     return true;
+}
+
+// ---------- helper ----------
+
+async function errorText(res) {
+    try {
+        const data = await res.json();
+        return data.error || `Server returned ${res.status}`;
+    } catch (e) {
+        return `Server returned ${res.status}`;
+    }
 }

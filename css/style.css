@@ -498,6 +498,7 @@ body.theme-dark .status-box.error { background: #7f1d1d; color: #fca5a5; }
   details > summary::-webkit-details-marker { display:none; }
   details:not([open]) > * { display: block !important; }
 }
+
 /* ==========================================================================
    11. CARD ACTION DROPDOWN MENU
    ========================================================================== */
@@ -506,18 +507,15 @@ body.theme-dark .status-box.error { background: #7f1d1d; color: #fca5a5; }
   row-gap: 6px;
 }
 
-/* The badge stays left; the actions menu pushes to the right */
 .card-header .badge {
   margin-right: auto;
 }
 
-/* Wrapper that anchors the dropdown panel */
 .action-menu {
   position: relative;
   display: inline-block;
 }
 
-/* The "⋯ Actions" trigger button */
 .action-menu-btn {
   font-size: 0.85rem;
   padding: 6px 12px;
@@ -534,7 +532,6 @@ body.theme-dark .status-box.error { background: #7f1d1d; color: #fca5a5; }
   color: var(--text-main);
 }
 
-/* The dropdown panel */
 .action-menu-panel {
   position: absolute;
   top: calc(100% + 4px);
@@ -551,12 +548,10 @@ body.theme-dark .status-box.error { background: #7f1d1d; color: #fca5a5; }
   gap: 2px;
 }
 
-/* Hidden state for the panel */
 .action-menu-panel.hidden {
   display: none !important;
 }
 
-/* Individual menu items */
 .action-menu-item {
   width: 100%;
   text-align: left;
@@ -574,7 +569,6 @@ body.theme-dark .status-box.error { background: #7f1d1d; color: #fca5a5; }
   background: var(--bg-main);
 }
 
-/* Destructive item (Delete) */
 .action-menu-item.danger {
   color: var(--danger);
 }
@@ -587,7 +581,6 @@ body.theme-dark .action-menu-item.danger:hover {
   background: #7f1d1d;
 }
 
-/* Print on the card header when shown standalone */
 @media print {
   .action-menu { display: none !important; }
 }
