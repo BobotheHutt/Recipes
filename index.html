@@ -6,14 +6,12 @@
   <title>My Recipe Collection</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="css/style.css">
-  <!-- Shared settings, themes, and profile modular script tags -->
   <script src="js/config.js" defer></script>
   <script src="js/themes.js" defer></script>
   <script src="js/profiles.js" defer></script>
 </head>
 <body>
 
-  <!-- Navigation Bar (Shared Selectors will auto-inject right inside here) -->
   <nav class="navbar">
     <a href="index.html" class="nav-link active">My Collection</a>
     <a href="explore.html" class="nav-link">Explore Community</a>
@@ -22,12 +20,10 @@
 
   <main class="container">
     <h1>My Collection</h1>
-    <p>Your personal collection of recipes, saved securely on your device.</p>
+    <p>Your personal collection of recipes, saved on your device.</p>
 
-    <!-- Search and Filter Control Panel -->
     <div class="controls-panel">
       <input type="text" id="search-bar" placeholder="🔍 Search your saved recipes..." autocomplete="off">
-      
       <div class="filter-buttons">
         <button class="filter-btn active" data-category="all">All</button>
         <button class="filter-btn" data-category="Breakfast">Breakfast</button>
@@ -38,15 +34,13 @@
       </div>
     </div>
 
-    <!-- Recipe Grid Display -->
     <div id="recipe-grid" class="recipe-grid"></div>
 
-    <!-- Interactive Manual Editing Overlay Modal Window -->
     <div id="edit-modal" class="modal-overlay hidden">
       <div class="modal-content" style="max-width: 650px; overflow-y: auto; max-height: 85vh;">
         <h3>📝 Edit Recipe</h3>
-        <p style="margin-bottom: 16px; font-size: 0.85rem;">Update any field below. Changes are saved to your device only.</p>
-        
+        <p style="margin-bottom: 16px; font-size: 0.85rem;">If this is a recipe you added to the community, your edits will sync there too.</p>
+
         <form id="edit-form">
           <div class="form-group">
             <label>Recipe Title</label>
@@ -74,7 +68,7 @@
             <label>Instructions (One step per line)</label>
             <textarea id="edit-instructions" rows="5"></textarea>
           </div>
-          
+
           <div class="modal-actions" style="flex-direction: row; justify-content: flex-end; gap: 8px;">
             <button type="button" id="close-edit-btn" class="text-btn">Cancel</button>
             <button type="submit" class="primary-btn">💾 Save Changes</button>
@@ -98,16 +92,15 @@
     function renderPrivateRecipes() {
         const grid = document.getElementById('recipe-grid');
         const searchKeyword = document.getElementById('search-bar').value.toLowerCase().trim();
-        const privateRecipes = getRecipes(); 
+        const privateRecipes = getRecipes();
         grid.innerHTML = '';
 
         const filteredRecipes = privateRecipes.filter(recipe => {
             const matchesCategory = (currentCategory === 'all' || recipe.category === currentCategory);
-            const matchesSearch = !searchKeyword || 
+            const matchesSearch = !searchKeyword ||
                 recipe.title.toLowerCase().includes(searchKeyword) ||
                 recipe.category.toLowerCase().includes(searchKeyword) ||
                 recipe.ingredients.some(ing => ing.toLowerCase().includes(searchKeyword));
-
             return matchesCategory && matchesSearch;
         });
 
@@ -116,18 +109,19 @@
             return;
         }
 
-        filteredRecipes.forEach((recipe, index) => {
+        // Render with original indices so edit/delete operate on the correct underlying record
+        filteredRecipes.forEach(recipe => {
+            const originalIndex = privateRecipes.indexOf(recipe);
             const card = document.createElement('div');
             card.className = 'recipe-card';
-            
             const authorTag = recipe.uploader ? `👤 Added by: ${recipe.uploader}` : '👤 Added by: Guest';
 
             card.innerHTML = `
                 <div class="card-header">
                     <span class="badge">${recipe.category}</span>
-                    <button class="print-btn" data-index="${index}">🖨️ Print</button>
-                    <button class="edit-btn" data-index="${index}" style="font-size:0.8rem; padding:4px 8px; background:#f0fdfa; color:#0d9488; border:1px solid #99f6e4; border-radius:6px;">✏️ Edit</button>
-                    <button class="delete-btn" data-index="${index}">🗑️ Delete</button>
+                    <button class="print-btn" data-index="${originalIndex}">🖨️ Print</button>
+                    <button class="edit-btn" data-index="${originalIndex}" style="font-size:0.8rem; padding:4px 8px; background:#f0fdfa; color:#0d9488; border:1px solid #99f6e4; border-radius:6px;">✏️ Edit</button>
+                    <button class="delete-btn" data-index="${originalIndex}">🗑️ Delete</button>
                 </div>
                 <h3>${recipe.title}</h3>
                 <p class="meta-info" style="margin-bottom:4px;">⏱️ Prep: ${recipe.prepTime}</p>
@@ -147,12 +141,10 @@
 
     function setupFilterListeners() {
         document.getElementById('search-bar').addEventListener('input', renderPrivateRecipes);
-
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
-                
                 currentCategory = e.target.dataset.category;
                 renderPrivateRecipes();
             });
@@ -161,13 +153,12 @@
 
     function setupInterfaceActions() {
         const grid = document.getElementById('recipe-grid');
-        
+
         grid.addEventListener('click', (e) => {
             if (e.target.classList.contains('print-btn')) {
                 const cardElement = e.target.closest('.recipe-card');
                 const detailContainer = cardElement.querySelector('details');
                 const originalState = detailContainer.hasAttribute('open');
-                
                 detailContainer.setAttribute('open', '');
                 window.print();
                 if (!originalState) detailContainer.removeAttribute('open');
@@ -176,13 +167,11 @@
             if (e.target.classList.contains('edit-btn')) {
                 activeEditingIndex = parseInt(e.target.dataset.index, 10);
                 const recipe = getRecipes()[activeEditingIndex];
-                
                 document.getElementById('edit-title').value = recipe.title;
                 document.getElementById('edit-category').value = recipe.category;
                 document.getElementById('edit-time').value = recipe.prepTime === 'Parsing...' ? '' : recipe.prepTime;
                 document.getElementById('edit-ingredients').value = recipe.ingredients.join('\n');
                 document.getElementById('edit-instructions').value = recipe.instructions.join('\n');
-                
                 document.getElementById('edit-modal').classList.remove('hidden');
             }
 
@@ -190,10 +179,8 @@
                 const targetIndex = parseInt(e.target.dataset.index, 10);
                 const privateRecipes = getRecipes();
                 const targetRecipe = privateRecipes[targetIndex];
-
-                if (confirm(`Are you sure you want to delete "${targetRecipe.title}" from your collection?`)) {
-                    privateRecipes.splice(targetIndex, 1);
-                    localStorage.setItem('my_recipes', JSON.stringify(privateRecipes));
+                if (confirm(`Delete "${targetRecipe.title}" from your collection? (Community version, if any, is not affected.)`)) {
+                    deleteLocalRecipe(targetIndex);
                     renderPrivateRecipes();
                 }
             }
@@ -207,33 +194,45 @@
         document.getElementById('edit-form').addEventListener('submit', handleRecipeEditsSave);
     }
 
-    function handleRecipeEditsSave(e) {
+    async function handleRecipeEditsSave(e) {
         e.preventDefault();
         if (activeEditingIndex === null) return;
 
         const privateRecipes = getRecipes();
         const originalRecipe = privateRecipes[activeEditingIndex];
+        const currentUploader = localStorage.getItem('uploader_name') || 'Guest';
 
         const ingLines = document.getElementById('edit-ingredients').value.split('\n').map(l => l.trim()).filter(Boolean);
         const instLines = document.getElementById('edit-instructions').value.split('\n').map(l => l.trim()).filter(Boolean);
 
         const updatedRecipe = {
+            ...originalRecipe,
             title: document.getElementById('edit-title').value.trim(),
             category: document.getElementById('edit-category').value,
             prepTime: document.getElementById('edit-time').value.trim() || 'Unspecified',
             ingredients: ingLines,
-            instructions: instLines,
-            sourceUrl: originalRecipe.sourceUrl, 
-            uploader: originalRecipe.uploader || 'Guest' 
+            instructions: instLines
         };
 
-        privateRecipes[activeEditingIndex] = updatedRecipe;
-        localStorage.setItem('my_recipes', JSON.stringify(privateRecipes));
+        // Sync to community only if this recipe has an id AND the current user owns it
+        const ownsInCommunity = updatedRecipe.id && updatedRecipe.uploader === currentUploader;
+
+        let syncMessage = "";
+        if (ownsInCommunity) {
+            try {
+                await updateInCommunity(updatedRecipe.id, updatedRecipe);
+                syncMessage = " Community version also updated.";
+            } catch (err) {
+                syncMessage = ` (Local saved, but community sync failed: ${err.message})`;
+            }
+        }
+
+        updateLocalRecipe(activeEditingIndex, updatedRecipe);
         renderPrivateRecipes();
         document.getElementById('edit-modal').classList.add('hidden');
         activeEditingIndex = null;
 
-        alert("Recipe updated!");
+        alert("Recipe updated!" + syncMessage);
     }
   </script>
 </body>

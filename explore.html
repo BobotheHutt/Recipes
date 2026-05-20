@@ -6,14 +6,12 @@
   <title>Explore Community Recipes</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="css/style.css">
-  <!-- Shared settings, themes, and profile modular script tags -->
   <script src="js/config.js" defer></script>
   <script src="js/themes.js" defer></script>
   <script src="js/profiles.js" defer></script>
 </head>
 <body>
 
-  <!-- Navigation Bar (Shared Selectors will auto-inject right inside here) -->
   <nav class="navbar">
     <a href="index.html" class="nav-link">My Collection</a>
     <a href="explore.html" class="nav-link active">Explore Community</a>
@@ -22,12 +20,10 @@
 
   <main class="container">
     <h1>Community Recipes</h1>
-    <p>Pre-parsed recipes available to everyone without using AI credits.</p>
+    <p>Recipes shared by everyone using this site.</p>
 
-    <!-- Search and Filter Control Panel -->
     <div class="controls-panel">
       <input type="text" id="search-bar" placeholder="🔍 Search ingredients, titles..." autocomplete="off">
-      
       <div class="filter-buttons">
         <button class="filter-btn active" data-category="all">All</button>
         <button class="filter-btn" data-category="Breakfast">Breakfast</button>
@@ -38,17 +34,18 @@
       </div>
     </div>
 
-    <!-- Grid Display -->
     <div id="global-grid" class="recipe-grid"></div>
   </main>
 
   <script src="js/storage.js"></script>
   <script>
-    let allGlobalRecipes = []; 
+    let allGlobalRecipes = [];
     let currentCategory = 'all';
 
     document.addEventListener('DOMContentLoaded', async () => {
-        allGlobalRecipes = await getGlobalRecipes(); 
+        const grid = document.getElementById('global-grid');
+        grid.innerHTML = `<p class="empty-state">Loading community recipes...</p>`;
+        allGlobalRecipes = await getGlobalRecipes();
         renderCommunityRecipes();
         setupFilterListeners();
         setupInterfaceActions();
@@ -61,11 +58,10 @@
 
         const filteredRecipes = allGlobalRecipes.filter(recipe => {
             const matchesCategory = (currentCategory === 'all' || recipe.category === currentCategory);
-            const matchesSearch = !searchKeyword || 
+            const matchesSearch = !searchKeyword ||
                 recipe.title.toLowerCase().includes(searchKeyword) ||
                 recipe.category.toLowerCase().includes(searchKeyword) ||
                 recipe.ingredients.some(ing => ing.toLowerCase().includes(searchKeyword));
-
             return matchesCategory && matchesSearch;
         });
 
@@ -77,14 +73,13 @@
         filteredRecipes.forEach(recipe => {
             const card = document.createElement('div');
             card.className = 'recipe-card';
-            
             const authorTag = recipe.uploader ? `👤 Added by: ${recipe.uploader}` : '👤 Added by: Guest';
 
             card.innerHTML = `
                 <div class="card-header">
                     <span class="badge">${recipe.category}</span>
-                    <button class="print-btn" data-title="${recipe.title}">🖨️ Print</button>
-                    <button class="save-to-local-btn" data-title="${recipe.title}">📥 Add to Collection</button>
+                    <button class="print-btn" data-id="${recipe.id}">🖨️ Print</button>
+                    <button class="save-to-local-btn" data-id="${recipe.id}">📥 Add to Collection</button>
                 </div>
                 <h3>${recipe.title}</h3>
                 <p class="meta-info" style="margin-bottom:4px;">⏱️ Prep: ${recipe.prepTime}</p>
@@ -104,44 +99,42 @@
 
     function setupFilterListeners() {
         document.getElementById('search-bar').addEventListener('input', renderCommunityRecipes);
-
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
-                
                 currentCategory = e.target.dataset.category;
-                renderCommunityRecipes(); 
+                renderCommunityRecipes();
             });
         });
     }
 
     function setupInterfaceActions() {
         const grid = document.getElementById('global-grid');
-        
+
         grid.addEventListener('click', (e) => {
             if (e.target.classList.contains('print-btn')) {
                 const cardElement = e.target.closest('.recipe-card');
                 const detailContainer = cardElement.querySelector('details');
                 const originalState = detailContainer.hasAttribute('open');
-                
                 detailContainer.setAttribute('open', '');
                 window.print();
                 if (!originalState) detailContainer.removeAttribute('open');
             }
 
             if (e.target.classList.contains('save-to-local-btn')) {
-                const targetTitle = e.target.dataset.title;
-                const recipeObject = allGlobalRecipes.find(r => r.title === targetTitle);
-                
-                const alreadyOwned = getRecipes().some(r => r.title === targetTitle);
+                const targetId = e.target.dataset.id;
+                const recipeObject = allGlobalRecipes.find(r => r.id === targetId);
+                if (!recipeObject) return;
+
+                const alreadyOwned = getRecipes().some(r => r.id === recipeObject.id);
                 if (alreadyOwned) {
-                    alert(`"${targetTitle}" is already in your collection.`);
+                    alert(`"${recipeObject.title}" is already in your collection.`);
                     return;
                 }
 
                 saveRecipe(recipeObject);
-                alert(`Successfully added "${targetTitle}" to your collection!`);
+                alert(`Added "${recipeObject.title}" to your collection!`);
             }
         });
     }

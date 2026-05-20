@@ -1,48 +1,82 @@
-// Automatically build a clean list if a new user arrives
+// js/storage.js
+
+// Ensure local storage exists
 if (!localStorage.getItem('my_recipes')) {
     localStorage.setItem('my_recipes', JSON.stringify([]));
 }
 
-// Fetch user's local recipes
+// ---------- Local (per-device) recipes ----------
+
 function getRecipes() {
     return JSON.parse(localStorage.getItem('my_recipes'));
 }
 
-// Save a newly parsed recipe to the local list
 function saveRecipe(recipeObj) {
     const current = getRecipes();
     current.push(recipeObj);
     localStorage.setItem('my_recipes', JSON.stringify(current));
 }
 
-// Fetch the shared public recipes from GitHub
+function updateLocalRecipe(index, recipeObj) {
+    const current = getRecipes();
+    current[index] = recipeObj;
+    localStorage.setItem('my_recipes', JSON.stringify(current));
+}
+
+function deleteLocalRecipe(index) {
+    const current = getRecipes();
+    current.splice(index, 1);
+    localStorage.setItem('my_recipes', JSON.stringify(current));
+}
+
+// ---------- Community recipes (via Cloudflare Worker + KV) ----------
+
 async function getGlobalRecipes() {
     try {
-        const response = await fetch('js/global-recipes.json');
+        const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes`);
         if (!response.ok) return [];
         return await response.json();
     } catch (e) {
-        console.error("Could not load global recipes:", e);
+        console.error("Could not load community recipes:", e);
         return [];
     }
 }
 
-// Check if a URL already exists anywhere
-async function checkForExistingRecipe(inputUrl) {
-    if (!inputUrl || !inputUrl.startsWith('http')) return null;
-    
-    // Clean URL to avoid matching errors from trailing slashes or spaces
-    const cleanUrl = inputUrl.trim().toLowerCase().replace(/\/$/, "");
+async function addToCommunity(recipe) {
+    const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(recipe)
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Server returned ${response.status}`);
+    }
+    return await response.json();
+}
 
-    // 1. Check local user storage first
-    const localList = getRecipes();
-    const localMatch = localList.find(r => r.sourceUrl && r.sourceUrl.toLowerCase().replace(/\/$/, "") === cleanUrl);
-    if (localMatch) return { recipe: localMatch, type: "your private saved list" };
+async function updateInCommunity(recipeId, updates) {
+    const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes/${recipeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Server returned ${response.status}`);
+    }
+    return await response.json();
+}
 
-    // 2. Check global public database second
-    const globalList = await getGlobalRecipes();
-    const globalMatch = globalList.find(r => r.sourceUrl && r.sourceUrl.toLowerCase().replace(/\/$/, "") === cleanUrl);
-    if (globalMatch) return { recipe: globalMatch, type: "the community database" };
-
-    return null; // Unique URL, okay to use AI
+async function deleteFromCommunity(recipeId, uploader) {
+    const response = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/recipes/${recipeId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uploader })
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Server returned ${response.status}`);
+    }
+    return true;
 }
