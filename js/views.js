@@ -17,6 +17,11 @@ function recipeCardHtml(recipe, actionItemsHtml) {
         ? `👤 Added by: ${escapeHtml(recipe.uploader)}`
         : '👤 Added by: Guest';
 
+    const showImg = (typeof getShowImages !== 'function') || getShowImages();
+    const imageHtml = (showImg && recipe.imageUrl)
+        ? `<div class="card-image"><img src="${escapeHtml(recipe.imageUrl)}" alt="${escapeHtml(recipe.title)}" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
+        : '';
+
     return `
         <div class="recipe-card" data-id="${escapeHtml(recipe.id)}">
             <div class="card-header">
@@ -28,6 +33,7 @@ function recipeCardHtml(recipe, actionItemsHtml) {
                     </div>
                 </div>
             </div>
+            ${imageHtml}
             <h3>${escapeHtml(recipe.title)}</h3>
             <p class="meta-info" style="margin-bottom:4px;">⏱️ Prep: ${escapeHtml(recipe.prepTime)}</p>
             <p style="font-size:0.8rem; font-style:italic; color:var(--text-muted); margin-bottom:16px;">${authorTag}</p>
@@ -128,6 +134,10 @@ function viewAdd() {
             <div class="form-group">
               <label>Source Web link (Optional)</label>
               <input type="url" id="manual-url" placeholder="https://site.com">
+            </div>
+            <div class="form-group">
+              <label>Image link (Optional)</label>
+              <input type="url" id="manual-image" placeholder="https://site.com/photo.jpg">
             </div>
             <div class="actions">
               <button type="submit" class="primary-btn">💾 Save Recipe</button>

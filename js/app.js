@@ -42,6 +42,14 @@ function setupNavbar() {
         if (typeof applyTheme === 'function') applyTheme(e.target.value);
     });
 
+    const imagesToggle = document.getElementById('images-toggle');
+    imagesToggle.checked = (typeof getShowImages === 'function') ? getShowImages() : true;
+    imagesToggle.addEventListener('change', (e) => {
+        if (typeof setShowImages === 'function') setShowImages(e.target.checked);
+        // Re-render the current tab so cards show/hide images immediately
+        renderRoute();
+    });
+
     document.getElementById('logout-btn').addEventListener('click', logout);
 
     const settingsBtn = document.getElementById('settings-btn');
@@ -344,7 +352,8 @@ function initAdd() {
             prepTime: document.getElementById('manual-time').value.trim() || 'Unspecified',
             ingredients: ing,
             instructions: inst,
-            sourceUrl: document.getElementById('manual-url').value.trim() || null
+            sourceUrl: document.getElementById('manual-url').value.trim() || null,
+            imageUrl: document.getElementById('manual-image').value.trim() || null
         };
 
         updateStatus("Saving...", "loading");
@@ -378,6 +387,11 @@ function initAdd() {
 
             const rawJsonText = data.candidates[0].content.parts[0].text;
             const parsedRecipe = JSON.parse(rawJsonText.replace(/```json|```/g, ''));
+            const candidateImages = data.candidateImages || [];
+
+            // If the page offered photos, let the user pick one first.
+            const chosenImage = await pickImage(candidateImages);
+            if (chosenImage) parsedRecipe.imageUrl = chosenImage;
 
             updateStatus("Saving...", "loading");
             const result = await saveEverywhere(parsedRecipe);
@@ -487,6 +501,7 @@ function openEditModal(mode, recipe) {
     document.getElementById('edit-time').value = recipe.prepTime === 'Parsing...' ? '' : recipe.prepTime;
     document.getElementById('edit-ingredients').value = (recipe.ingredients || []).join('\n');
     document.getElementById('edit-instructions').value = (recipe.instructions || []).join('\n');
+    document.getElementById('edit-image').value = recipe.imageUrl || '';
     document.getElementById('edit-modal').classList.remove('hidden');
 }
 
@@ -506,7 +521,8 @@ async function handleEditSave(e) {
         category: document.getElementById('edit-category').value,
         prepTime: document.getElementById('edit-time').value.trim() || 'Unspecified',
         ingredients: ing,
-        instructions: inst
+        instructions: inst,
+        imageUrl: document.getElementById('edit-image').value.trim() || null
     };
 
     if (editContext.mode === 'collection') {
@@ -555,4 +571,85 @@ async function handleEditSave(e) {
         closeEditModal();
         if (currentRoute() === 'explore') renderRoute();
     }
+}
+
+// ==========================================================================
+// IMAGE PICKER MODAL
+// ==========================================================================
+
+// Show the image picker. Resolves to a chosen image URL, or null (skip / none).
+// If there are no candidate images, resolves immediately to null.
+function pickImage(candidateImages) {
+    return new Promise((resolve) => {
+        const images = candidateImages || [];
+
+        // Nothing to choose from — skip the modal entirely.
+        if (images.length === 0) {
+            resolve(null);
+            return;
+        }
+
+        const modal = document.getElementById('image-modal');
+        const choicesEl = document.getElementById('image-choices');
+        const customInput = document.getElementById('image-custom');
+        const confirmBtn = document.getElementById('image-confirm-btn');
+        const skipBtn = document.getElementById('image-skip-btn');
+
+        let selectedUrl = images[0]; // default to the first
+
+        customInput.value = '';
+        choicesEl.innerHTML = images.map((url, i) => `
+            <button type="button" class="image-choice ${i === 0 ? 'selected' : ''}" data-url="${escapeHtml(url)}">
+                <img src="${escapeHtml(url)}" alt="Option ${i + 1}" loading="lazy"
+                     onerror="this.closest('.image-choice').style.display='none'">
+            </button>
+        `).join('');
+
+        modal.classList.remove('hidden');
+
+        function markSelected(el) {
+            choicesEl.querySelectorAll('.image-choice').forEach(c => c.classList.remove('selected'));
+            if (el) el.classList.add('selected');
+        }
+
+        function onChoiceClick(e) {
+            const choice = e.target.closest('.image-choice');
+            if (!choice) return;
+            selectedUrl = choice.dataset.url;
+            customInput.value = '';
+            markSelected(choice);
+        }
+
+        function onCustomInput() {
+            if (customInput.value.trim()) {
+                markSelected(null);
+                selectedUrl = customInput.value.trim();
+            }
+        }
+
+        function cleanup() {
+            modal.classList.add('hidden');
+            choicesEl.removeEventListener('click', onChoiceClick);
+            customInput.removeEventListener('input', onCustomInput);
+            confirmBtn.removeEventListener('click', onConfirm);
+            skipBtn.removeEventListener('click', onSkip);
+        }
+
+        function onConfirm() {
+            const custom = customInput.value.trim();
+            const result = custom || selectedUrl || null;
+            cleanup();
+            resolve(result);
+        }
+
+        function onSkip() {
+            cleanup();
+            resolve(null);
+        }
+
+        choicesEl.addEventListener('click', onChoiceClick);
+        customInput.addEventListener('input', onCustomInput);
+        confirmBtn.addEventListener('click', onConfirm);
+        skipBtn.addEventListener('click', onSkip);
+    });
 }

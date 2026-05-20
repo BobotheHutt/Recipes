@@ -398,16 +398,64 @@ async function extractRecipeContentFromUrl(pageUrl) {
 
   const html = await response.text();
 
+  const images = collectCandidateImages(html, jsonLdImage(html));
+
   const jsonLd = findRecipeJsonLd(html);
   if (jsonLd) {
-    return { text: "STRUCTURED RECIPE DATA:\n" + JSON.stringify(jsonLd), sourceUrl: pageUrl };
+    return {
+      text: "STRUCTURED RECIPE DATA:\n" + JSON.stringify(jsonLd),
+      sourceUrl: pageUrl,
+      images,
+    };
   }
 
   const plainText = htmlToText(html);
   if (plainText.length < 200) {
     throw new Error("That page didn't contain readable recipe text (it may load content with JavaScript). Please copy and paste the recipe instead.");
   }
-  return { text: "WEB PAGE TEXT:\n" + plainText.slice(0, 12000), sourceUrl: pageUrl };
+  return { text: "WEB PAGE TEXT:\n" + plainText.slice(0, 12000), sourceUrl: pageUrl, images };
+}
+
+// Pull the image URL(s) declared inside the Recipe JSON-LD node.
+function jsonLdImage(html) {
+  const recipe = findRecipeJsonLd(html);
+  if (!recipe || !recipe.image) return [];
+  const img = recipe.image;
+  const out = [];
+  const push = (v) => {
+    if (typeof v === "string") out.push(v);
+    else if (v && typeof v === "object" && typeof v.url === "string") out.push(v.url);
+  };
+  if (Array.isArray(img)) img.forEach(push);
+  else push(img);
+  return out;
+}
+
+// Gather a handful of likely recipe photos: JSON-LD images first, then the
+// og:image / twitter:image social thumbnails. Deduplicated, capped at 6.
+function collectCandidateImages(html, jsonLdImages) {
+  const found = [];
+  const seen = new Set();
+  const add = (url) => {
+    if (!url) return;
+    const u = url.trim();
+    if (!/^https?:\/\//i.test(u)) return;
+    if (seen.has(u)) return;
+    seen.add(u);
+    found.push(u);
+  };
+
+  (jsonLdImages || []).forEach(add);
+
+  // <meta property="og:image" content="..."> and twitter:image variants
+  const metaRegex = /<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image)["'][^>]*>/gi;
+  let m;
+  while ((m = metaRegex.exec(html)) !== null) {
+    const contentMatch = m[0].match(/content=["']([^"']+)["']/i);
+    if (contentMatch) add(contentMatch[1]);
+  }
+
+  return found.slice(0, 6);
 }
 
 function findRecipeJsonLd(html) {
@@ -474,12 +522,14 @@ async function handleParse(request, env, corsHeaders) {
 
   let contentForAI = recipeText;
   let detectedSourceUrl = null;
+  let candidateImages = [];
 
   if (looksLikeUrl(recipeText)) {
     try {
       const extracted = await extractRecipeContentFromUrl(recipeText.trim());
       contentForAI = extracted.text;
       detectedSourceUrl = extracted.sourceUrl;
+      candidateImages = extracted.images || [];
     } catch (e) {
       return jsonResponse({ error: e.message }, 422, corsHeaders);
     }
@@ -526,6 +576,9 @@ async function handleParse(request, env, corsHeaders) {
   } catch (e) {
     // leave response untouched if shape is unexpected
   }
+
+  // Attach the candidate images so the frontend can show an image picker.
+  data.candidateImages = candidateImages;
 
   return jsonResponse(data, 200, corsHeaders);
 }

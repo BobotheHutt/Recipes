@@ -24,3 +24,14 @@ function applyTheme(theme) {
 function getSavedTheme() {
     return localStorage.getItem('site_theme') || 'light';
 }
+
+// ---- Image display preference (per device, like theme) ----
+
+function getShowImages() {
+    // default: images ON
+    return localStorage.getItem('show_images') !== 'false';
+}
+
+function setShowImages(show) {
+    localStorage.setItem('show_images', show ? 'true' : 'false');
+}

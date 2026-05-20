@@ -685,3 +685,54 @@ body.theme-dark .action-menu-item.danger:hover {
 @media print {
   .action-menu { display: none !important; }
 }
+
+/* ==========================================================================
+   12. RECIPE IMAGES & IMAGE PICKER
+   ========================================================================== */
+.card-image {
+  margin: 0 -24px 16px;
+  overflow: hidden;
+}
+
+.card-image img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+/* Image picker modal */
+.image-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.image-choice {
+  padding: 0;
+  border: 3px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg-main);
+  transition: border-color 0.15s ease;
+}
+
+.image-choice img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  display: block;
+}
+
+.image-choice.selected {
+  border-color: var(--primary);
+}
+
+/* Settings checkbox row */
+.settings-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}

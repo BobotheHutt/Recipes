@@ -43,6 +43,10 @@
             <option value="sepia">🍂 Cozy Sepia</option>
           </select>
         </div>
+        <div class="settings-row">
+          <label for="images-toggle">Show recipe images</label>
+          <input type="checkbox" id="images-toggle">
+        </div>
         <button id="logout-btn" class="settings-logout">Log out</button>
       </div>
     </div>
@@ -83,11 +87,30 @@
           <label>Instructions (One step per line)</label>
           <textarea id="edit-instructions" rows="5"></textarea>
         </div>
+        <div class="form-group">
+          <label>Image link (Optional)</label>
+          <input type="url" id="edit-image" placeholder="https://site.com/photo.jpg">
+        </div>
         <div class="modal-actions" style="flex-direction: row; justify-content: flex-end; gap: 8px;">
           <button type="button" id="close-edit-btn" class="text-btn">Cancel</button>
           <button type="submit" class="primary-btn">💾 Save Changes</button>
         </div>
       </form>
+    </div>
+  <!-- Image picker modal — shown after parsing when the page offered photos -->
+  <div id="image-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 640px; overflow-y: auto; max-height: 85vh;">
+      <h3>🖼️ Choose a Photo</h3>
+      <p style="margin-bottom: 16px; font-size: 0.85rem;">Pick a photo for this recipe, paste your own image link, or skip.</p>
+      <div id="image-choices" class="image-choices"></div>
+      <div class="form-group" style="margin-top:16px;">
+        <label>Or paste your own image link</label>
+        <input type="url" id="image-custom" placeholder="https://site.com/photo.jpg">
+      </div>
+      <div class="modal-actions" style="flex-direction: row; justify-content: flex-end; gap: 8px;">
+        <button type="button" id="image-skip-btn" class="text-btn">Skip — no image</button>
+        <button type="button" id="image-confirm-btn" class="primary-btn">Use selected photo</button>
+      </div>
     </div>
   </div>
 
