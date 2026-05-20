@@ -578,78 +578,132 @@ async function handleEditSave(e) {
 // ==========================================================================
 
 // Show the image picker. Resolves to a chosen image URL, or null (skip / none).
-// If there are no candidate images, resolves immediately to null.
+// Builds its own overlay with inline styles so it depends on no external CSS
+// or pre-placed HTML — nothing to be missing, stale, or out of order.
 function pickImage(candidateImages) {
     return new Promise((resolve) => {
         const images = candidateImages || [];
-
-        // Nothing to choose from — skip the modal entirely.
         if (images.length === 0) {
             resolve(null);
             return;
         }
 
-        const modal = document.getElementById('image-modal');
-        const choicesEl = document.getElementById('image-choices');
-        const customInput = document.getElementById('image-custom');
-        const confirmBtn = document.getElementById('image-confirm-btn');
-        const skipBtn = document.getElementById('image-skip-btn');
+        let selectedUrl = images[0];
 
-        let selectedUrl = images[0]; // default to the first
+        // ---- overlay ----
+        const overlay = document.createElement('div');
+        overlay.style.cssText =
+            'position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(3px);' +
+            'display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;';
 
-        customInput.value = '';
-        choicesEl.innerHTML = images.map((url, i) => `
-            <button type="button" class="image-choice ${i === 0 ? 'selected' : ''}" data-url="${escapeHtml(url)}">
-                <img src="${escapeHtml(url)}" alt="Option ${i + 1}" loading="lazy"
-                     onerror="this.closest('.image-choice').style.display='none'">
-            </button>
-        `).join('');
+        // ---- box ----
+        const box = document.createElement('div');
+        box.style.cssText =
+            'background:var(--bg-card,#fff); color:var(--text-main,#1f2937); border-radius:12px;' +
+            'padding:28px; max-width:640px; width:100%; max-height:85vh; overflow-y:auto;' +
+            'box-shadow:0 20px 40px -10px rgba(0,0,0,0.4);';
 
-        modal.classList.remove('hidden');
+        const heading = document.createElement('h3');
+        heading.textContent = '🖼️ Choose a Photo';
+        heading.style.cssText = 'margin:0 0 8px; font-size:1.3rem;';
 
-        function markSelected(el) {
-            choicesEl.querySelectorAll('.image-choice').forEach(c => c.classList.remove('selected'));
-            if (el) el.classList.add('selected');
+        const sub = document.createElement('p');
+        sub.textContent = 'Pick a photo for this recipe, paste your own image link, or skip.';
+        sub.style.cssText = 'margin:0 0 18px; font-size:0.85rem; color:var(--text-muted,#666);';
+
+        // ---- thumbnail grid ----
+        const grid = document.createElement('div');
+        grid.style.cssText =
+            'display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px;';
+
+        const thumbs = [];
+        images.forEach((url, i) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style.cssText =
+                'padding:0; border:3px solid transparent; border-radius:8px; overflow:hidden;' +
+                'cursor:pointer; background:var(--bg-main,#f3f3f3); height:120px;';
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Option ' + (i + 1);
+            img.loading = 'lazy';
+            img.style.cssText = 'width:100%; height:100%; object-fit:cover; display:block;';
+            img.onerror = () => { btn.style.display = 'none'; };
+            btn.appendChild(img);
+            btn.addEventListener('click', () => {
+                selectedUrl = url;
+                customInput.value = '';
+                highlight(btn);
+            });
+            grid.appendChild(btn);
+            thumbs.push(btn);
+        });
+
+        function highlight(activeBtn) {
+            thumbs.forEach(b => { b.style.borderColor = 'transparent'; });
+            if (activeBtn) activeBtn.style.borderColor = 'var(--primary,#10b981)';
         }
+        highlight(thumbs[0]);
 
-        function onChoiceClick(e) {
-            const choice = e.target.closest('.image-choice');
-            if (!choice) return;
-            selectedUrl = choice.dataset.url;
-            customInput.value = '';
-            markSelected(choice);
-        }
+        // ---- custom URL field ----
+        const customLabel = document.createElement('label');
+        customLabel.textContent = 'Or paste your own image link';
+        customLabel.style.cssText =
+            'display:block; margin:18px 0 6px; font-weight:600; font-size:0.85rem;';
 
-        function onCustomInput() {
+        const customInput = document.createElement('input');
+        customInput.type = 'url';
+        customInput.placeholder = 'https://site.com/photo.jpg';
+        customInput.style.cssText =
+            'width:100%; padding:12px; font-size:1rem; border-radius:8px;' +
+            'border:1px solid var(--border,#ccc); background:var(--bg-main,#fafafa);' +
+            'color:var(--text-main,#1f2937); outline:none; box-sizing:border-box;';
+        customInput.addEventListener('input', () => {
             if (customInput.value.trim()) {
-                markSelected(null);
+                highlight(null);
                 selectedUrl = customInput.value.trim();
             }
-        }
+        });
 
-        function cleanup() {
-            modal.classList.add('hidden');
-            choicesEl.removeEventListener('click', onChoiceClick);
-            customInput.removeEventListener('input', onCustomInput);
-            confirmBtn.removeEventListener('click', onConfirm);
-            skipBtn.removeEventListener('click', onSkip);
-        }
+        // ---- action buttons ----
+        const actions = document.createElement('div');
+        actions.style.cssText =
+            'display:flex; justify-content:flex-end; gap:8px; margin-top:22px;';
 
-        function onConfirm() {
-            const custom = customInput.value.trim();
-            const result = custom || selectedUrl || null;
-            cleanup();
+        const skipBtn = document.createElement('button');
+        skipBtn.type = 'button';
+        skipBtn.textContent = 'Skip — no image';
+        skipBtn.style.cssText =
+            'padding:10px 18px; border-radius:8px; border:1px solid var(--border,#ccc);' +
+            'background:transparent; color:var(--text-muted,#666); cursor:pointer;';
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.type = 'button';
+        confirmBtn.textContent = 'Use selected photo';
+        confirmBtn.style.cssText =
+            'padding:10px 18px; border-radius:8px; border:none;' +
+            'background:var(--primary,#10b981); color:#fff; font-weight:500; cursor:pointer;';
+
+        function finish(result) {
+            document.body.removeChild(overlay);
             resolve(result);
         }
+        skipBtn.addEventListener('click', () => finish(null));
+        confirmBtn.addEventListener('click', () => {
+            const custom = customInput.value.trim();
+            finish(custom || selectedUrl || null);
+        });
 
-        function onSkip() {
-            cleanup();
-            resolve(null);
-        }
+        actions.appendChild(skipBtn);
+        actions.appendChild(confirmBtn);
 
-        choicesEl.addEventListener('click', onChoiceClick);
-        customInput.addEventListener('input', onCustomInput);
-        confirmBtn.addEventListener('click', onConfirm);
-        skipBtn.addEventListener('click', onSkip);
+        box.appendChild(heading);
+        box.appendChild(sub);
+        box.appendChild(grid);
+        box.appendChild(customLabel);
+        box.appendChild(customInput);
+        box.appendChild(actions);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
     });
 }

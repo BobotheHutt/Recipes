@@ -97,22 +97,7 @@
         </div>
       </form>
     </div>
-  <!-- Image picker modal — shown after parsing when the page offered photos -->
-  <div id="image-modal" class="modal-overlay hidden">
-    <div class="modal-content" style="max-width: 640px; overflow-y: auto; max-height: 85vh;">
-      <h3>🖼️ Choose a Photo</h3>
-      <p style="margin-bottom: 16px; font-size: 0.85rem;">Pick a photo for this recipe, paste your own image link, or skip.</p>
-      <div id="image-choices" class="image-choices"></div>
-      <div class="form-group" style="margin-top:16px;">
-        <label>Or paste your own image link</label>
-        <input type="url" id="image-custom" placeholder="https://site.com/photo.jpg">
-      </div>
-      <div class="modal-actions" style="flex-direction: row; justify-content: flex-end; gap: 8px;">
-        <button type="button" id="image-skip-btn" class="text-btn">Skip — no image</button>
-        <button type="button" id="image-confirm-btn" class="primary-btn">Use selected photo</button>
-      </div>
-    </div>
-  </div>
+  <!-- Image picker builds its own overlay in JS (see pickImage in app.js) -->
 
 </body>
 </html>
