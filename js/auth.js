@@ -52,19 +52,18 @@ async function requireLogin() {
     }
 }
 
-// Inject "logged in as X", an Admin link (if admin), and a Logout button into the navbar.
+// Inject the Admin nav link (if admin) and a ⚙ Settings dropdown into the navbar.
 function buildSessionNavbar(username, isAdmin) {
     const navbar = document.querySelector('.navbar');
-    if (!navbar || document.getElementById('session-box')) return;
+    if (!navbar || document.getElementById('settings-menu')) return;
 
-    // Admin nav link
+    // Admin nav link, placed after the last existing nav link
     if (isAdmin && !document.getElementById('admin-nav-link')) {
         const adminLink = document.createElement('a');
         adminLink.id = 'admin-nav-link';
         adminLink.href = 'admin.html';
         adminLink.className = 'nav-link';
         adminLink.textContent = 'Admin';
-        // place it after the last existing nav link
         const links = navbar.querySelectorAll('.nav-link');
         if (links.length) {
             links[links.length - 1].insertAdjacentElement('afterend', adminLink);
@@ -73,23 +72,52 @@ function buildSessionNavbar(username, isAdmin) {
         }
     }
 
-    const box = document.createElement('div');
-    box.id = 'session-box';
-    box.style.cssText = 'display:flex; align-items:center; gap:10px; margin-left:16px;';
+    const theme = (typeof getSavedTheme === 'function') ? getSavedTheme() : 'light';
 
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = '👤 ' + username;
-    nameSpan.style.cssText = 'font-size:0.85rem; font-weight:600; color:var(--text-muted);';
+    // Settings dropdown: trigger button + panel
+    const menu = document.createElement('div');
+    menu.id = 'settings-menu';
+    menu.className = 'settings-menu';
+    menu.innerHTML = `
+        <button id="settings-btn" class="settings-btn" aria-label="Settings">⚙ Settings</button>
+        <div id="settings-panel" class="settings-panel hidden">
+            <div class="settings-row settings-user">👤 ${username}</div>
+            <div class="settings-row">
+                <label for="theme-select">Theme</label>
+                <select id="theme-select">
+                    <option value="light">☀️ Light Emerald</option>
+                    <option value="dark">🌙 Dark Slate</option>
+                    <option value="sepia">🍂 Cozy Sepia</option>
+                </select>
+            </div>
+            <button id="logout-btn" class="settings-logout">Log out</button>
+        </div>
+    `;
+    navbar.appendChild(menu);
 
-    const logoutBtn = document.createElement('button');
-    logoutBtn.textContent = 'Log out';
-    logoutBtn.className = 'text-btn';
-    logoutBtn.style.cssText = 'font-size:0.8rem; padding:6px 12px; border:1px solid var(--border); border-radius:6px;';
+    const btn = document.getElementById('settings-btn');
+    const panel = document.getElementById('settings-panel');
+    const themeSelect = document.getElementById('theme-select');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    themeSelect.value = theme;
+    themeSelect.addEventListener('change', (e) => {
+        if (typeof applyTheme === 'function') applyTheme(e.target.value);
+    });
+
     logoutBtn.addEventListener('click', logout);
 
-    box.appendChild(nameSpan);
-    box.appendChild(logoutBtn);
-    navbar.appendChild(box);
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        panel.classList.toggle('hidden');
+    });
+
+    // Close the panel when clicking anywhere outside it
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#settings-menu')) {
+            panel.classList.add('hidden');
+        }
+    });
 }
 
 async function logout() {
