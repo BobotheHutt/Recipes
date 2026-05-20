@@ -36,7 +36,6 @@
 
     <div id="global-grid" class="recipe-grid"></div>
 
-    <!-- Admin edit modal (hidden unless admin mode is active and user clicks Edit) -->
     <div id="edit-modal" class="modal-overlay hidden">
       <div class="modal-content" style="max-width: 650px; overflow-y: auto; max-height: 85vh;">
         <h3>📝 Edit Community Recipe (Admin)</h3>
@@ -119,17 +118,22 @@
             card.className = 'recipe-card';
             const authorTag = recipe.uploader ? `👤 Added by: ${recipe.uploader}` : '👤 Added by: Guest';
 
-            const adminButtons = adminActive ? `
-                <button class="admin-edit-btn" data-id="${recipe.id}" style="font-size:0.8rem; padding:4px 8px; background:#f0fdfa; color:#0d9488; border:1px solid #99f6e4; border-radius:6px;">✏️ Edit</button>
-                <button class="admin-delete-btn delete-btn" data-id="${recipe.id}">🗑️ Delete</button>
+            const adminItems = adminActive ? `
+                <button class="action-menu-item edit-action" data-id="${recipe.id}">✏️ Edit (Admin)</button>
+                <button class="action-menu-item danger delete-action" data-id="${recipe.id}">🗑️ Delete (Admin)</button>
             ` : '';
 
             card.innerHTML = `
                 <div class="card-header">
                     <span class="badge">${recipe.category}</span>
-                    <button class="print-btn" data-id="${recipe.id}">🖨️ Print</button>
-                    <button class="save-to-local-btn" data-id="${recipe.id}">📥 Add to Collection</button>
-                    ${adminButtons}
+                    <div class="action-menu">
+                        <button class="action-menu-btn">⋯ Actions</button>
+                        <div class="action-menu-panel hidden">
+                            <button class="action-menu-item print-action">🖨️ Print</button>
+                            <button class="action-menu-item save-action" data-id="${recipe.id}">📥 Add to Collection</button>
+                            ${adminItems}
+                        </div>
+                    </div>
                 </div>
                 <h3>${recipe.title}</h3>
                 <p class="meta-info" style="margin-bottom:4px;">⏱️ Prep: ${recipe.prepTime}</p>
@@ -159,13 +163,33 @@
         });
     }
 
+    // Close any open action menu when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.action-menu')) {
+            closeAllMenus();
+        }
+    });
+
+    function closeAllMenus() {
+        document.querySelectorAll('.action-menu-panel').forEach(p => p.classList.add('hidden'));
+    }
+
     function setupInterfaceActions() {
         const grid = document.getElementById('global-grid');
 
         grid.addEventListener('click', async (e) => {
             const target = e.target;
 
-            if (target.classList.contains('print-btn')) {
+            if (target.classList.contains('action-menu-btn')) {
+                const panel = target.nextElementSibling;
+                const isHidden = panel.classList.contains('hidden');
+                closeAllMenus();
+                if (isHidden) panel.classList.remove('hidden');
+                return;
+            }
+
+            if (target.classList.contains('print-action')) {
+                closeAllMenus();
                 const cardElement = target.closest('.recipe-card');
                 const detailContainer = cardElement.querySelector('details');
                 const originalState = detailContainer.hasAttribute('open');
@@ -175,7 +199,8 @@
                 return;
             }
 
-            if (target.classList.contains('save-to-local-btn')) {
+            if (target.classList.contains('save-action')) {
+                closeAllMenus();
                 const targetId = target.dataset.id;
                 const recipeObject = allGlobalRecipes.find(r => r.id === targetId);
                 if (!recipeObject) return;
@@ -185,27 +210,23 @@
                     alert(`"${recipeObject.title}" is already in your collection.`);
                     return;
                 }
-
                 saveRecipe(recipeObject);
                 alert(`Added "${recipeObject.title}" to your collection!`);
                 return;
             }
 
-            if (target.classList.contains('admin-edit-btn')) {
-                const targetId = target.dataset.id;
-                const recipe = allGlobalRecipes.find(r => r.id === targetId);
-                if (!recipe) return;
-                openEditModal(recipe);
+            if (target.classList.contains('edit-action')) {
+                closeAllMenus();
+                const recipe = allGlobalRecipes.find(r => r.id === target.dataset.id);
+                if (recipe) openEditModal(recipe);
                 return;
             }
 
-            if (target.classList.contains('admin-delete-btn')) {
-                const targetId = target.dataset.id;
-                const recipe = allGlobalRecipes.find(r => r.id === targetId);
+            if (target.classList.contains('delete-action')) {
+                closeAllMenus();
+                const recipe = allGlobalRecipes.find(r => r.id === target.dataset.id);
                 if (!recipe) return;
-
                 if (!confirm(`Delete "${recipe.title}" from the community? This affects all users.`)) return;
-
                 try {
                     await deleteFromCommunity(recipe.id, recipe.uploader);
                     allGlobalRecipes = allGlobalRecipes.filter(r => r.id !== recipe.id);
@@ -260,7 +281,6 @@
 
         try {
             const saved = await updateInCommunity(updatedRecipe.id, updatedRecipe);
-            // Update local cache
             const idx = allGlobalRecipes.findIndex(r => r.id === saved.id);
             if (idx !== -1) allGlobalRecipes[idx] = saved;
             renderCommunityRecipes();

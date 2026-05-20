@@ -109,7 +109,6 @@
             return;
         }
 
-        // Render with original indices so edit/delete operate on the correct underlying record
         filteredRecipes.forEach(recipe => {
             const originalIndex = privateRecipes.indexOf(recipe);
             const card = document.createElement('div');
@@ -119,9 +118,14 @@
             card.innerHTML = `
                 <div class="card-header">
                     <span class="badge">${recipe.category}</span>
-                    <button class="print-btn" data-index="${originalIndex}">🖨️ Print</button>
-                    <button class="edit-btn" data-index="${originalIndex}" style="font-size:0.8rem; padding:4px 8px; background:#f0fdfa; color:#0d9488; border:1px solid #99f6e4; border-radius:6px;">✏️ Edit</button>
-                    <button class="delete-btn" data-index="${originalIndex}">🗑️ Delete</button>
+                    <div class="action-menu">
+                        <button class="action-menu-btn" data-index="${originalIndex}">⋯ Actions</button>
+                        <div class="action-menu-panel hidden">
+                            <button class="action-menu-item print-action" data-index="${originalIndex}">🖨️ Print</button>
+                            <button class="action-menu-item edit-action" data-index="${originalIndex}">✏️ Edit</button>
+                            <button class="action-menu-item danger delete-action" data-index="${originalIndex}">🗑️ Delete</button>
+                        </div>
+                    </div>
                 </div>
                 <h3>${recipe.title}</h3>
                 <p class="meta-info" style="margin-bottom:4px;">⏱️ Prep: ${recipe.prepTime}</p>
@@ -151,21 +155,42 @@
         });
     }
 
+    // Close any open action menu when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.action-menu')) {
+            document.querySelectorAll('.action-menu-panel').forEach(p => p.classList.add('hidden'));
+        }
+    });
+
     function setupInterfaceActions() {
         const grid = document.getElementById('recipe-grid');
 
         grid.addEventListener('click', (e) => {
-            if (e.target.classList.contains('print-btn')) {
-                const cardElement = e.target.closest('.recipe-card');
+            const target = e.target;
+
+            // Toggle the dropdown
+            if (target.classList.contains('action-menu-btn')) {
+                const panel = target.nextElementSibling;
+                const isHidden = panel.classList.contains('hidden');
+                document.querySelectorAll('.action-menu-panel').forEach(p => p.classList.add('hidden'));
+                if (isHidden) panel.classList.remove('hidden');
+                return;
+            }
+
+            if (target.classList.contains('print-action')) {
+                closeAllMenus();
+                const cardElement = target.closest('.recipe-card');
                 const detailContainer = cardElement.querySelector('details');
                 const originalState = detailContainer.hasAttribute('open');
                 detailContainer.setAttribute('open', '');
                 window.print();
                 if (!originalState) detailContainer.removeAttribute('open');
+                return;
             }
 
-            if (e.target.classList.contains('edit-btn')) {
-                activeEditingIndex = parseInt(e.target.dataset.index, 10);
+            if (target.classList.contains('edit-action')) {
+                closeAllMenus();
+                activeEditingIndex = parseInt(target.dataset.index, 10);
                 const recipe = getRecipes()[activeEditingIndex];
                 document.getElementById('edit-title').value = recipe.title;
                 document.getElementById('edit-category').value = recipe.category;
@@ -173,16 +198,19 @@
                 document.getElementById('edit-ingredients').value = recipe.ingredients.join('\n');
                 document.getElementById('edit-instructions').value = recipe.instructions.join('\n');
                 document.getElementById('edit-modal').classList.remove('hidden');
+                return;
             }
 
-            if (e.target.classList.contains('delete-btn')) {
-                const targetIndex = parseInt(e.target.dataset.index, 10);
+            if (target.classList.contains('delete-action')) {
+                closeAllMenus();
+                const targetIndex = parseInt(target.dataset.index, 10);
                 const privateRecipes = getRecipes();
                 const targetRecipe = privateRecipes[targetIndex];
                 if (confirm(`Delete "${targetRecipe.title}" from your collection? (Community version, if any, is not affected.)`)) {
                     deleteLocalRecipe(targetIndex);
                     renderPrivateRecipes();
                 }
+                return;
             }
         });
 
@@ -192,6 +220,10 @@
         });
 
         document.getElementById('edit-form').addEventListener('submit', handleRecipeEditsSave);
+    }
+
+    function closeAllMenus() {
+        document.querySelectorAll('.action-menu-panel').forEach(p => p.classList.add('hidden'));
     }
 
     async function handleRecipeEditsSave(e) {
@@ -214,7 +246,6 @@
             instructions: instLines
         };
 
-        // Sync to community only if this recipe has an id AND the current user owns it
         const ownsInCommunity = updatedRecipe.id && updatedRecipe.uploader === currentUploader;
 
         let syncMessage = "";
