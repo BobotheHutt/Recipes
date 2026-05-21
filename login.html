@@ -7,7 +7,8 @@
     // Apply saved theme's background instantly, before the stylesheet loads,
     // so reloading a page never flashes a white screen.
     (function () {
-      var t = localStorage.getItem('site_theme') || 'light';
+      var t = 'light';
+      try { var p = JSON.parse(localStorage.getItem('account_prefs') || '{}'); if (p.theme) t = p.theme; } catch (e) {}
       var bg = { light: '#f9fafb', dark: '#0f172a', sepia: '#f4eae1' }[t] || '#f9fafb';
       document.documentElement.style.backgroundColor = bg;
       document.body && (document.body.style.backgroundColor = bg);

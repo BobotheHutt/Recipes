@@ -1,37 +1,36 @@
 // js/themes.js
-// Applies the saved theme immediately to avoid a flash of the wrong colors.
-// The theme PICKER now lives in the Settings dropdown (see auth.js).
+// Theme application. Account preferences (incl. theme) are managed in auth.js;
+// this file just applies a theme to the page and reads the cached value for
+// the instant first paint.
 
+// Read the theme from the cached account prefs (anti-flash fallback before
+// the live account data arrives). Falls back to 'light'.
+function getCachedTheme() {
+    try {
+        const raw = localStorage.getItem('account_prefs');
+        if (raw) {
+            const p = JSON.parse(raw);
+            if (p && typeof p.theme === 'string') return p.theme;
+        }
+    } catch (e) { /* ignore */ }
+    return 'light';
+}
+
+// Apply a theme to the page (does not save it — saving is auth.js savePrefs).
+function applyTheme(theme) {
+    document.body.className = (theme && theme !== 'light') ? `theme-${theme}` : '';
+}
+
+// Apply the cached theme immediately on load to avoid a flash.
 (function () {
-    const savedTheme = localStorage.getItem('site_theme') || 'light';
-    if (savedTheme !== 'light') {
+    const t = getCachedTheme();
+    if (t !== 'light') {
         if (document.body) {
-            document.body.className = `theme-${savedTheme}`;
+            document.body.className = `theme-${t}`;
         } else {
-            document.addEventListener("DOMContentLoaded", () => {
-                document.body.className = `theme-${savedTheme}`;
+            document.addEventListener('DOMContentLoaded', () => {
+                document.body.className = `theme-${t}`;
             });
         }
     }
 })();
-
-// Apply a theme choice and remember it.
-function applyTheme(theme) {
-    localStorage.setItem('site_theme', theme);
-    document.body.className = theme !== 'light' ? `theme-${theme}` : '';
-}
-
-function getSavedTheme() {
-    return localStorage.getItem('site_theme') || 'light';
-}
-
-// ---- Image display preference (per device, like theme) ----
-
-function getShowImages() {
-    // default: images ON
-    return localStorage.getItem('show_images') !== 'false';
-}
-
-function setShowImages(show) {
-    localStorage.setItem('show_images', show ? 'true' : 'false');
-}

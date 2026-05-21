@@ -20,6 +20,11 @@ async function init() {
         return;
     }
 
+    // The cached theme was applied instantly on page load; now that we have
+    // the live account preferences, apply the authoritative theme (corrects
+    // the rare case where the cache was stale, e.g. first load on a device).
+    applyTheme(getPrefs().theme || 'light');
+
     setupNavbar();
     setupEditModal();
 
@@ -36,18 +41,29 @@ function setupNavbar() {
         document.getElementById('admin-nav-link').style.display = '';
     }
 
+    const prefs = getPrefs();
+
+    // Theme
     const themeSelect = document.getElementById('theme-select');
-    themeSelect.value = (typeof getSavedTheme === 'function') ? getSavedTheme() : 'light';
+    themeSelect.value = prefs.theme || 'light';
     themeSelect.addEventListener('change', (e) => {
-        if (typeof applyTheme === 'function') applyTheme(e.target.value);
+        applyTheme(e.target.value);
+        savePrefs({ theme: e.target.value });
     });
 
+    // Show images
     const imagesToggle = document.getElementById('images-toggle');
-    imagesToggle.checked = (typeof getShowImages === 'function') ? getShowImages() : true;
+    imagesToggle.checked = prefs.showImages !== false;
     imagesToggle.addEventListener('change', (e) => {
-        if (typeof setShowImages === 'function') setShowImages(e.target.checked);
-        // Re-render the current tab so cards show/hide images immediately
-        renderRoute();
+        savePrefs({ showImages: e.target.checked });
+        renderRoute(); // re-render so cards show/hide images immediately
+    });
+
+    // Auto-share new recipes to community
+    const autoShareToggle = document.getElementById('autoshare-toggle');
+    autoShareToggle.checked = prefs.autoShare !== false;
+    autoShareToggle.addEventListener('change', (e) => {
+        savePrefs({ autoShare: e.target.checked });
     });
 
     document.getElementById('logout-btn').addEventListener('click', logout);
@@ -157,11 +173,17 @@ async function initCollection() {
             grid.innerHTML = `<p class="empty-state">No matching recipes in your collection.</p>`;
             return;
         }
-        grid.innerHTML = filtered.map(r => recipeCardHtml(r, `
-            <button class="action-menu-item print-action">🖨️ Print</button>
-            <button class="action-menu-item edit-action">✏️ Edit</button>
-            <button class="action-menu-item danger delete-action">🗑️ Delete</button>
-        `)).join('');
+        grid.innerHTML = filtered.map(r => {
+            const shareItem = r.sharedToCommunity
+                ? `<button class="action-menu-item unshare-action">🚫 Remove from Community</button>`
+                : `<button class="action-menu-item share-action">📢 Share to Community</button>`;
+            return recipeCardHtml(r, `
+                <button class="action-menu-item print-action">🖨️ Print</button>
+                <button class="action-menu-item edit-action">✏️ Edit</button>
+                ${shareItem}
+                <button class="action-menu-item danger delete-action">🗑️ Delete</button>
+            `);
+        }).join('');
     };
 
     document.getElementById('search-bar').addEventListener('input', render);
@@ -195,6 +217,34 @@ async function initCollection() {
             closeAllMenus();
             const recipe = myRecipes.find(r => r.id === id);
             if (recipe) openEditModal('collection', recipe);
+        } else if (target.classList.contains('share-action')) {
+            closeAllMenus();
+            const recipe = myRecipes.find(r => r.id === id);
+            if (!recipe) return;
+            try {
+                // addToCommunity sends the recipe with its existing id; the
+                // worker keeps that id so the two copies stay linked.
+                await addToCommunity(recipe);
+                recipe.sharedToCommunity = true;
+                await updateMyRecipe(recipe.id, recipe);
+                render();
+                alert(`"${recipe.title}" is now shared with the community.`);
+            } catch (err) {
+                alert("Couldn't share: " + err.message);
+            }
+        } else if (target.classList.contains('unshare-action')) {
+            closeAllMenus();
+            const recipe = myRecipes.find(r => r.id === id);
+            if (!recipe) return;
+            if (!confirm(`Remove "${recipe.title}" from the community? It stays in your collection.`)) return;
+            try {
+                await deleteFromCommunity(recipe.id);
+                recipe.sharedToCommunity = false;
+                await updateMyRecipe(recipe.id, recipe);
+                render();
+            } catch (err) {
+                alert("Couldn't remove from community: " + err.message);
+            }
         } else if (target.classList.contains('delete-action')) {
             closeAllMenus();
             const recipe = myRecipes.find(r => r.id === id);
@@ -219,24 +269,36 @@ async function initCollection() {
 
 async function initExplore() {
     let category = 'all';
+    let profileFilter = 'all';
     const grid = document.getElementById('global-grid');
     grid.innerHTML = `<p class="empty-state">Loading community recipes...</p>`;
 
     communityRecipes = await getGlobalRecipes();
 
+    // Populate the "Added by" profile dropdown from who actually has recipes
+    const profileSelect = document.getElementById('profile-filter');
+    const uploaders = [...new Set(communityRecipes.map(r => r.uploader).filter(Boolean))].sort();
+    profileSelect.innerHTML = `<option value="all">Everyone</option>` +
+        uploaders.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
+
     const render = () => {
         const kw = document.getElementById('search-bar').value;
-        const filtered = filterRecipes(communityRecipes, kw, category);
+        let filtered = filterRecipes(communityRecipes, kw, category);
+        if (profileFilter !== 'all') {
+            filtered = filtered.filter(r => r.uploader === profileFilter);
+        }
         if (filtered.length === 0) {
             grid.innerHTML = `<p class="empty-state">No matching community recipes found.</p>`;
             return;
         }
         grid.innerHTML = filtered.map(r => {
-            const canManage = SESSION.isAdmin || r.uploader === SESSION.username;
-            const manage = canManage ? `
-                <button class="action-menu-item edit-action">✏️ Edit</button>
-                <button class="action-menu-item danger delete-action">🗑️ Delete</button>
-            ` : '';
+            const owns = r.uploader === SESSION.username;
+            const canManage = SESSION.isAdmin || owns;
+            let manage = '';
+            if (canManage) {
+                manage += `<button class="action-menu-item edit-action">✏️ Edit</button>`;
+                manage += `<button class="action-menu-item danger remove-action">🚫 Remove from Community</button>`;
+            }
             return recipeCardHtml(r, `
                 <button class="action-menu-item print-action">🖨️ Print</button>
                 <button class="action-menu-item save-action">📥 Add to Collection</button>
@@ -246,6 +308,10 @@ async function initExplore() {
     };
 
     document.getElementById('search-bar').addEventListener('input', render);
+    profileSelect.addEventListener('change', (e) => {
+        profileFilter = e.target.value;
+        render();
+    });
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -285,15 +351,18 @@ async function initExplore() {
         } else if (target.classList.contains('edit-action')) {
             closeAllMenus();
             openEditModal('explore', recipe);
-        } else if (target.classList.contains('delete-action')) {
+        } else if (target.classList.contains('remove-action')) {
             closeAllMenus();
-            if (!confirm(`Delete "${recipe.title}" from the community? This affects everyone.`)) return;
+            const whose = recipe.uploader === SESSION.username
+                ? 'the community'
+                : `the community (recipe by ${recipe.uploader})`;
+            if (!confirm(`Remove "${recipe.title}" from ${whose}? This affects everyone. The owner's personal copy is not affected.`)) return;
             try {
                 await deleteFromCommunity(id);
                 communityRecipes = communityRecipes.filter(r => r.id !== id);
                 render();
             } catch (err) {
-                alert("Couldn't delete: " + err.message);
+                alert("Couldn't remove from community: " + err.message);
             }
         }
     });
@@ -331,15 +400,27 @@ function initAdd() {
         document.getElementById('ai-view').classList.add('hidden');
     });
 
-    // Save to community (assigns id), then mirror into the user's collection.
-    async function saveEverywhere(recipe) {
-        const communityRecipe = await addToCommunity(recipe);
-        try {
-            await addMyRecipe(communityRecipe);
-        } catch (err) {
-            return { recipe: communityRecipe, personalSaved: false, error: err.message };
+    // Save a new recipe. If auto-share is on, it goes to the community AND
+    // the personal collection. If off, personal collection only.
+    async function saveNewRecipe(recipe) {
+        const autoShare = getPrefs().autoShare !== false;
+
+        if (autoShare) {
+            // Community save assigns the id; mirror that exact recipe personally.
+            const communityRecipe = await addToCommunity(recipe);
+            communityRecipe.sharedToCommunity = true;
+            try {
+                await addMyRecipe(communityRecipe);
+            } catch (err) {
+                return { recipe: communityRecipe, personalSaved: false, shared: true, error: err.message };
+            }
+            return { recipe: communityRecipe, personalSaved: true, shared: true };
+        } else {
+            // Personal only — the worker assigns an id on add.
+            recipe.sharedToCommunity = false;
+            const saved = await addMyRecipe(recipe);
+            return { recipe: saved, personalSaved: true, shared: false };
         }
-        return { recipe: communityRecipe, personalSaved: true };
     }
 
     document.getElementById('manual-form').addEventListener('submit', async (e) => {
@@ -358,11 +439,13 @@ function initAdd() {
 
         updateStatus("Saving...", "loading");
         try {
-            const result = await saveEverywhere(recipe);
-            if (result.personalSaved) {
+            const result = await saveNewRecipe(recipe);
+            if (!result.personalSaved) {
+                flashStatus(`Shared to the community, but adding to your collection failed: ${result.error}`, "error");
+            } else if (result.shared) {
                 flashStatus(`🎉 Saved "${result.recipe.title}" to your collection and shared with the community!`, "success");
             } else {
-                flashStatus(`Shared to the community, but adding to your collection failed: ${result.error}`, "error");
+                flashStatus(`🎉 Saved "${result.recipe.title}" to your collection. (Not shared — you can share it anytime from My Collection.)`, "success");
             }
             document.getElementById('manual-form').reset();
         } catch (err) {
@@ -394,11 +477,13 @@ function initAdd() {
             if (chosenImage) parsedRecipe.imageUrl = chosenImage;
 
             updateStatus("Saving...", "loading");
-            const result = await saveEverywhere(parsedRecipe);
-            if (result.personalSaved) {
+            const result = await saveNewRecipe(parsedRecipe);
+            if (!result.personalSaved) {
+                updateStatus(`Shared to the community, but adding to your collection failed: ${result.error}`, "error");
+            } else if (result.shared) {
                 updateStatus(`🎉 Added "${result.recipe.title}" to your collection and the community!`, "success");
             } else {
-                updateStatus(`Shared to the community, but adding to your collection failed: ${result.error}`, "error");
+                updateStatus(`🎉 Added "${result.recipe.title}" to your collection. (Not shared — you can share it anytime from My Collection.)`, "success");
             }
             inputField.value = "";
         } catch (error) {
@@ -595,7 +680,7 @@ async function handleEditSave(e) {
         }
 
         let syncMessage = "";
-        if (updated.uploader && updated.uploader === SESSION.username) {
+        if (updated.sharedToCommunity && updated.uploader === SESSION.username) {
             try {
                 await updateInCommunity(updated.id, updated);
                 syncMessage = " Community copy also updated.";

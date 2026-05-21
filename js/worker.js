@@ -31,6 +31,8 @@ export default {
         return await handleValidate(request, env, corsHeaders);
       if (path === "/auth/logout" && method === "POST")
         return await handleLogout(request, env, corsHeaders);
+      if (path === "/auth/preferences" && method === "POST")
+        return await handleUpdatePreferences(request, env, corsHeaders);
 
       // ---- Admin ----
       if (path === "/admin/accounts" && method === "GET")
@@ -206,6 +208,16 @@ async function ensureAdminAccount(env) {
   }
 }
 
+// Default preferences for a new account.
+function defaultPreferences() {
+  return { theme: "light", showImages: true, autoShare: true };
+}
+
+// Merge stored prefs with defaults so older accounts missing fields still work.
+function accountPreferences(account) {
+  return Object.assign(defaultPreferences(), account.preferences || {});
+}
+
 async function handleSignup(request, env, corsHeaders) {
   const { username, password } = await request.json();
 
@@ -228,6 +240,7 @@ async function handleSignup(request, env, corsHeaders) {
     salt: saltHex,
     isAdmin: false,
     createdAt: Date.now(),
+    preferences: defaultPreferences(),
   };
   await saveAccount(env, account);
 
@@ -240,7 +253,10 @@ async function handleSignup(request, env, corsHeaders) {
   await env.RECIPES_KV.put("userrecipes:" + name, JSON.stringify([]));
 
   const token = await issueToken(env, name);
-  return jsonResponse({ token, username: name, isAdmin: false }, 200, corsHeaders);
+  return jsonResponse(
+    { token, username: name, isAdmin: false, preferences: defaultPreferences() },
+    200, corsHeaders
+  );
 }
 
 async function handleLogin(request, env, corsHeaders) {
@@ -255,7 +271,10 @@ async function handleLogin(request, env, corsHeaders) {
     return jsonResponse({ error: "Wrong password" }, 401, corsHeaders);
 
   const token = await issueToken(env, name);
-  return jsonResponse({ token, username: name, isAdmin: !!account.isAdmin }, 200, corsHeaders);
+  return jsonResponse(
+    { token, username: name, isAdmin: !!account.isAdmin, preferences: accountPreferences(account) },
+    200, corsHeaders
+  );
 }
 
 async function issueToken(env, username) {
@@ -267,7 +286,28 @@ async function issueToken(env, username) {
 async function handleValidate(request, env, corsHeaders) {
   const account = await authenticate(request, env);
   if (!account) return unauthorized(corsHeaders);
-  return jsonResponse({ username: account.username, isAdmin: !!account.isAdmin }, 200, corsHeaders);
+  return jsonResponse(
+    { username: account.username, isAdmin: !!account.isAdmin, preferences: accountPreferences(account) },
+    200, corsHeaders
+  );
+}
+
+async function handleUpdatePreferences(request, env, corsHeaders) {
+  const account = await authenticate(request, env);
+  if (!account) return unauthorized(corsHeaders);
+
+  const incoming = await request.json();
+  const current = accountPreferences(account);
+
+  // Only accept known preference fields
+  if (typeof incoming.theme === "string") current.theme = incoming.theme;
+  if (typeof incoming.showImages === "boolean") current.showImages = incoming.showImages;
+  if (typeof incoming.autoShare === "boolean") current.autoShare = incoming.autoShare;
+
+  account.preferences = current;
+  await saveAccount(env, account);
+
+  return jsonResponse({ ok: true, preferences: current }, 200, corsHeaders);
 }
 
 async function handleLogout(request, env, corsHeaders) {
@@ -829,10 +869,21 @@ async function handleAddCommunity(request, env, corsHeaders) {
 
   // identity comes from the token, never the client
   recipe.uploader = account.username;
-  recipe.id = crypto.randomUUID();
-  recipe.createdAt = Date.now();
 
   const recipes = await readCommunity(env);
+
+  // If the recipe already carries an id (sharing an existing personal recipe),
+  // keep it so the personal and community copies stay linked. Otherwise mint one.
+  if (recipe.id) {
+    if (recipes.some((r) => r.id === recipe.id)) {
+      return jsonResponse({ error: "That recipe is already in the community" }, 409, corsHeaders);
+    }
+  } else {
+    recipe.id = crypto.randomUUID();
+  }
+  if (!recipe.createdAt) recipe.createdAt = Date.now();
+  recipe.sharedToCommunity = true;
+
   recipes.push(recipe);
   await writeCommunity(env, recipes);
   return jsonResponse(recipe, 200, corsHeaders);

@@ -23,7 +23,7 @@ function recipeCardHtml(recipe, actionItemsHtml) {
         }
     }
 
-    const showImg = (typeof getShowImages !== 'function') || getShowImages();
+    const showImg = (typeof getPrefs !== 'function') || getPrefs().showImages !== false;
     const imageHtml = (showImg && recipe.imageUrl)
         ? `<div class="card-image"><img src="${escapeHtml(recipe.imageUrl)}" alt="${escapeHtml(recipe.title)}" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
         : '';
@@ -85,6 +85,14 @@ function viewExplore() {
         <h1>Community Recipes</h1>
         <p>Recipes shared by everyone using this site.</p>
         ${FILTER_BAR}
+        <div class="controls-panel" style="margin-top:-8px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label for="profile-filter" style="font-size:0.9rem; font-weight:600; color:var(--text-muted);">Added by:</label>
+            <select id="profile-filter" style="padding:8px 12px; border-radius:8px; background:var(--bg-card); color:var(--text-main); border:1px solid var(--border); cursor:pointer;">
+              <option value="all">Everyone</option>
+            </select>
+          </div>
+        </div>
         <div id="global-grid" class="recipe-grid"></div>
     `;
 }

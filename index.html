@@ -6,7 +6,8 @@
   <script>
     // Apply saved theme's background instantly so loading never flashes white.
     (function () {
-      var t = localStorage.getItem('site_theme') || 'light';
+      var t = 'light';
+      try { var p = JSON.parse(localStorage.getItem('account_prefs') || '{}'); if (p.theme) t = p.theme; } catch (e) {}
       var bg = { light: '#f9fafb', dark: '#0f172a', sepia: '#f4eae1' }[t] || '#f9fafb';
       document.documentElement.style.backgroundColor = bg;
       document.body && (document.body.style.backgroundColor = bg);
@@ -46,6 +47,10 @@
         <div class="settings-row">
           <label for="images-toggle">Show recipe images</label>
           <input type="checkbox" id="images-toggle">
+        </div>
+        <div class="settings-row">
+          <label for="autoshare-toggle">Auto-share new recipes to community</label>
+          <input type="checkbox" id="autoshare-toggle">
         </div>
         <button id="logout-btn" class="settings-logout">Log out</button>
       </div>
