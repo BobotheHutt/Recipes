@@ -1,6 +1,10 @@
 /* ==========================================================================
-   1. ROOT VARIABLES & THEME ENGINE ENGINES
+   1. ROOT VARIABLES & THEME ENGINE
    ========================================================================== */
+/* Theme variables and the page background live on the <html> element — the
+   root of the page. A background on <html> covers the entire viewport by
+   definition, independent of how much content any page has. The theme class
+   (theme-dark / theme-sepia) is set on <html> by themes.js. */
 :root {
   /* Default: Light Emerald Theme Variables */
   --bg-main: #f9fafb;        /* Soft Cool Grey Background */
@@ -19,7 +23,7 @@
 }
 
 /* Theme 2: Dark Slate Mode Configuration Overrides */
-body.theme-dark {
+html.theme-dark {
   --bg-main: #0f172a;
   --bg-card: #1e293b;
   --text-main: #f8fafc;
@@ -33,7 +37,7 @@ body.theme-dark {
 }
 
 /* Theme 3: Cozy Sepia Mode Configuration Overrides */
-body.theme-sepia {
+html.theme-sepia {
   --bg-main: #f4eae1;
   --bg-card: #fdf6ee;
   --text-main: #433422;
@@ -55,13 +59,19 @@ body.theme-sepia {
   padding: 0;
 }
 
+/* The page background lives here, on the root element, so it always covers
+   the full viewport regardless of content height. */
+html {
+  background-color: var(--bg-main);
+  transition: background-color 0.15s ease;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: var(--bg-main);
   color: var(--text-main);
   line-height: 1.5;
   padding-bottom: 60px;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: color 0.15s ease;
 }
 
 .container {
@@ -245,11 +255,11 @@ p {
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
-body.theme-dark #search-bar:focus {
+html.theme-dark #search-bar:focus {
   box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15);
 }
 
-body.theme-sepia #search-bar:focus {
+html.theme-sepia #search-bar:focus {
   box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.15);
 }
 
@@ -471,14 +481,14 @@ button {
 .secondary-btn { background: #e0f2fe; color: #0369a1; }
 .secondary-btn:hover { background: #bae6fd; }
 
-body.theme-dark .secondary-btn { background: #0369a1; color: #f8fafc; }
-body.theme-dark .secondary-btn:hover { background: #0284c7; }
+html.theme-dark .secondary-btn { background: #0369a1; color: #f8fafc; }
+html.theme-dark .secondary-btn:hover { background: #0284c7; }
 
 .danger-btn { background: #fee2e2; color: var(--danger); }
 .danger-btn:hover { background: #fecaca; }
 
-body.theme-dark .danger-btn { background: #dc2626; color: #f8fafc; }
-body.theme-dark .danger-btn:hover { background: #b91c1c; }
+html.theme-dark .danger-btn { background: #dc2626; color: #f8fafc; }
+html.theme-dark .danger-btn:hover { background: #b91c1c; }
 
 .text-btn { background: transparent; color: var(--text-muted); }
 .text-btn:hover { color: var(--text-main); background: var(--bg-main); }
@@ -496,14 +506,14 @@ body.theme-dark .danger-btn:hover { background: #b91c1c; }
 .delete-btn { font-size: 0.8rem; padding: 4px 8px; background: #fff5f5; color: var(--danger); border: 1px solid #fecaca; }
 .delete-btn:hover { background: #fee2e2; }
 
-body.theme-dark .delete-btn { background: #7f1d1d; color: #fecaca; border-color: #991b1b; }
-body.theme-dark .delete-btn:hover { background: #991b1b; }
+html.theme-dark .delete-btn { background: #7f1d1d; color: #fecaca; border-color: #991b1b; }
+html.theme-dark .delete-btn:hover { background: #991b1b; }
 
 .save-to-local-btn { font-size: 0.8rem; padding: 4px 8px; background: #f0fdf4; color: var(--primary); border: 1px solid #bbf7d0; }
 .save-to-local-btn:hover { background: #dcfce7; }
 
-body.theme-dark .save-to-local-btn { background: #064e3b; color: #a7f3d0; border-color: #047857; }
-body.theme-dark .save-to-local-btn:hover { background: #047857; }
+html.theme-dark .save-to-local-btn { background: #064e3b; color: #a7f3d0; border-color: #047857; }
+html.theme-dark .save-to-local-btn:hover { background: #047857; }
 
 /* ==========================================================================
    9. INTERACTIVE POPUP MODALS & ALERTS
@@ -519,10 +529,10 @@ body.theme-dark .save-to-local-btn:hover { background: #047857; }
 .status-box.success { background: #dcfce7; color: #15803d; }
 .status-box.error { background: #fee2e2; color: #b91c1c; }
 
-body.theme-dark .status-box.info { background: #1e3a8a; color: #93c5fd; }
-body.theme-dark .status-box.loading { background: #78350f; color: #fde68a; }
-body.theme-dark .status-box.success { background: #064e3b; color: #6ee7b7; }
-body.theme-dark .status-box.error { background: #7f1d1d; color: #fca5a5; }
+html.theme-dark .status-box.info { background: #1e3a8a; color: #93c5fd; }
+html.theme-dark .status-box.loading { background: #78350f; color: #fde68a; }
+html.theme-dark .status-box.success { background: #064e3b; color: #6ee7b7; }
+html.theme-dark .status-box.error { background: #7f1d1d; color: #fca5a5; }
 
 .empty-state { text-align: center; color: var(--text-muted); padding: 40px 0; grid-column: 1 / -1; }
 
@@ -678,7 +688,7 @@ body.theme-dark .status-box.error { background: #7f1d1d; color: #fca5a5; }
   background: #fee2e2;
 }
 
-body.theme-dark .action-menu-item.danger:hover {
+html.theme-dark .action-menu-item.danger:hover {
   background: #7f1d1d;
 }
 
