@@ -27,6 +27,7 @@ async function init() {
 
     setupNavbar();
     setupEditModal();
+    setupPasswordModal();
 
     window.addEventListener('hashchange', renderRoute);
     renderRoute();
@@ -845,5 +846,92 @@ function pickImage(candidateImages) {
         box.appendChild(actions);
         overlay.appendChild(box);
         document.body.appendChild(overlay);
+    });
+}
+
+// ==========================================================================
+// CHANGE PASSWORD MODAL
+// ==========================================================================
+
+function setupPasswordModal() {
+    const modal = document.getElementById('password-modal');
+    const openBtn = document.getElementById('change-password-btn');
+    const closeBtn = document.getElementById('close-password-btn');
+    const form = document.getElementById('password-form');
+    const statusBox = document.getElementById('password-status');
+
+    function showStatus(msg, type) {
+        statusBox.innerText = msg;
+        statusBox.className = `status-box ${type}`;
+    }
+    function clearStatus() {
+        statusBox.className = 'status-box hidden';
+    }
+    function resetForm() {
+        form.reset();
+        clearStatus();
+        // reset any revealed password fields back to hidden
+        modal.querySelectorAll('input[type="text"]').forEach(inp => {
+            if (['pw-current', 'pw-new', 'pw-new2'].includes(inp.id)) inp.type = 'password';
+        });
+        modal.querySelectorAll('.password-toggle').forEach(btn => { btn.textContent = '👁️'; });
+    }
+
+    openBtn.addEventListener('click', () => {
+        document.getElementById('settings-panel').classList.add('hidden');
+        resetForm();
+        modal.classList.remove('hidden');
+    });
+
+    closeBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        resetForm();
+    });
+
+    // Eye toggles inside this modal
+    modal.querySelectorAll('.password-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = document.getElementById(btn.dataset.target);
+            if (!input) return;
+            const showing = input.type === 'text';
+            input.type = showing ? 'password' : 'text';
+            btn.textContent = showing ? '👁️' : '🙈';
+            btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+        });
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const currentPassword = document.getElementById('pw-current').value;
+        const newPassword = document.getElementById('pw-new').value;
+        const newPassword2 = document.getElementById('pw-new2').value;
+
+        if (newPassword.length < 4) {
+            showStatus('New password must be at least 4 characters.', 'error');
+            return;
+        }
+        if (newPassword !== newPassword2) {
+            showStatus("The two new passwords don't match.", 'error');
+            return;
+        }
+
+        showStatus('Changing...', 'loading');
+        try {
+            const res = await fetch(`${APP_CONFIG.CLOUDFLARE_BRIDGE_URL}/auth/change-password`, {
+                method: 'POST',
+                headers: AUTH.headers({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ currentPassword, newPassword })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Could not change password');
+
+            showStatus('Password changed successfully.', 'success');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                resetForm();
+            }, 1500);
+        } catch (err) {
+            showStatus(err.message, 'error');
+        }
     });
 }

@@ -33,6 +33,8 @@ export default {
         return await handleLogout(request, env, corsHeaders);
       if (path === "/auth/preferences" && method === "POST")
         return await handleUpdatePreferences(request, env, corsHeaders);
+      if (path === "/auth/change-password" && method === "POST")
+        return await handleChangePassword(request, env, corsHeaders);
 
       // ---- Admin ----
       if (path === "/admin/accounts" && method === "GET")
@@ -308,6 +310,39 @@ async function handleUpdatePreferences(request, env, corsHeaders) {
   await saveAccount(env, account);
 
   return jsonResponse({ ok: true, preferences: current }, 200, corsHeaders);
+}
+
+async function handleChangePassword(request, env, corsHeaders) {
+  const account = await authenticate(request, env);
+  if (!account) return unauthorized(corsHeaders);
+
+  // The built-in Admin password is the Cloudflare secret — not changeable here.
+  if (account.username.toLowerCase() === ADMIN_USERNAME.toLowerCase()) {
+    return jsonResponse(
+      { error: "The Admin password is set by the ADMIN_PASSWORD secret in Cloudflare. Change it there." },
+      400, corsHeaders
+    );
+  }
+
+  const { currentPassword, newPassword } = await request.json();
+
+  if (!currentPassword || !newPassword)
+    return jsonResponse({ error: "Both current and new password are required" }, 400, corsHeaders);
+  if (newPassword.length < 4)
+    return jsonResponse({ error: "New password must be at least 4 characters" }, 400, corsHeaders);
+
+  // Verify the current password
+  const { hashHex } = await hashPassword(currentPassword, account.salt);
+  if (hashHex !== account.passwordHash)
+    return jsonResponse({ error: "Current password is incorrect" }, 401, corsHeaders);
+
+  // Set the new password
+  const fresh = await hashPassword(newPassword);
+  account.passwordHash = fresh.hashHex;
+  account.salt = fresh.saltHex;
+  await saveAccount(env, account);
+
+  return jsonResponse({ ok: true }, 200, corsHeaders);
 }
 
 async function handleLogout(request, env, corsHeaders) {

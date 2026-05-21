@@ -746,3 +746,33 @@ html.theme-dark .action-menu-item.danger:hover {
   cursor: pointer;
   accent-color: var(--primary);
 }
+
+/* ==========================================================================
+   13. PASSWORD FIELDS (show/hide eye toggle)
+   ========================================================================== */
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap input {
+  padding-right: 48px;
+  width: 100%;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 6px 8px;
+  line-height: 1;
+  opacity: 0.65;
+}
+
+.password-toggle:hover {
+  opacity: 1;
+}
