@@ -725,11 +725,14 @@ async function handleParse(request, env, corsHeaders) {
     (detectedSourceUrl
       ? `If a sourceUrl is not evident in the content, use "${detectedSourceUrl}" as the sourceUrl. `
       : "If a sourceUrl is not evident in the content, set sourceUrl to null. ") +
+    "For totalTime, give the total time to make the recipe (prep plus cook) as a whole number of minutes only, e.g. 45. If unknown, use null. " +
+    "For description, give a short 1-2 sentence summary of the dish. If none is evident, use null. " +
     "Respond with strict JSON only, no markdown, no extra text, matching this structure:\n" +
     '{\n' +
     '  "title": "Recipe Name",\n' +
     '  "category": "Breakfast/Lunch/Dinner/Dessert/Snack",\n' +
-    '  "prepTime": "X mins",\n' +
+    '  "totalTime": 45,\n' +
+    '  "description": "Short summary or null",\n' +
     '  "ingredients": ["item 1", "item 2"],\n' +
     '  "instructions": ["step 1", "step 2"],\n' +
     '  "sourceUrl": "URL or null"\n' +

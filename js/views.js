@@ -10,6 +10,34 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
+// Format a time value as a simple string: minutes, or hours+"hr" past 60.
+// Accepts a number (minutes) or a legacy string like "45 mins".
+function formatTime(value) {
+    if (value == null || value === '' || value === 'Unspecified' || value === 'Parsing...') {
+        return null;
+    }
+    // Pull the first number out of whatever we were given
+    const num = typeof value === 'number' ? value : parseInt(String(value).match(/\d+/), 10);
+    if (isNaN(num) || num <= 0) {
+        // Non-numeric legacy value — show it as-is
+        return typeof value === 'string' ? value : null;
+    }
+    if (num < 60) return `${num} min`;
+    const hrs = Math.floor(num / 60);
+    const mins = num % 60;
+    return mins === 0 ? `${hrs} hr` : `${hrs} hr ${mins} min`;
+}
+
+// Pull a readable site name from a URL, e.g. "allrecipes.com".
+function siteNameFromUrl(url) {
+    try {
+        const host = new URL(url).hostname;
+        return host.replace(/^www\./, '');
+    } catch (e) {
+        return null;
+    }
+}
+
 // ---- shared recipe card ----
 
 function recipeCardHtml(recipe, actionItemsHtml) {
@@ -28,12 +56,30 @@ function recipeCardHtml(recipe, actionItemsHtml) {
         ? `<div class="card-image"><img src="${escapeHtml(recipe.imageUrl)}" alt="${escapeHtml(recipe.title)}" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
         : '';
 
+    // Time: prefer the new totalTime, fall back to legacy prepTime
+    const timeText = formatTime(recipe.totalTime != null ? recipe.totalTime : recipe.prepTime);
+    const timeHtml = timeText
+        ? `<span class="card-time" title="Total time">🕐 ${escapeHtml(timeText)}</span>`
+        : '';
+
+    // Source: show the site name above the link
+    const siteName = recipe.sourceUrl ? siteNameFromUrl(recipe.sourceUrl) : null;
+    const sourceHtml = recipe.sourceUrl
+        ? `<p class="source-row"><span class="source-site">🔗 Source: ${escapeHtml(siteName || 'website')}</span>
+             <a href="${escapeHtml(recipe.sourceUrl)}" target="_blank" class="source-link">Original Source ↗</a></p>`
+        : '';
+
+    const descHtml = recipe.description
+        ? `<p class="recipe-desc">${escapeHtml(recipe.description)}</p>`
+        : '';
+
     return `
         <div class="recipe-card" data-id="${escapeHtml(recipe.id)}">
             <div class="card-header">
                 <span class="badge">${escapeHtml(recipe.category)}</span>
+                ${timeHtml}
                 <div class="action-menu">
-                    <button class="action-menu-btn">⋯ Actions</button>
+                    <button class="action-menu-btn" title="Actions" aria-label="Actions">⚙</button>
                     <div class="action-menu-panel hidden">
                         ${actionItemsHtml}
                     </div>
@@ -41,7 +87,7 @@ function recipeCardHtml(recipe, actionItemsHtml) {
             </div>
             ${imageHtml}
             <h3>${escapeHtml(recipe.title)}</h3>
-            <p class="meta-info" style="margin-bottom:4px;">⏱️ Prep: ${escapeHtml(recipe.prepTime)}</p>
+            ${descHtml}
             <p style="font-size:0.8rem; font-style:italic; color:var(--text-muted); margin-bottom:16px;">${authorTag}</p>
             <details>
                 <summary>View Recipe Details</summary>
@@ -49,7 +95,7 @@ function recipeCardHtml(recipe, actionItemsHtml) {
                 <ul>${(recipe.ingredients || []).map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>
                 <h4>Instructions:</h4>
                 <ol>${(recipe.instructions || []).map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>
-                ${recipe.sourceUrl ? `<a href="${escapeHtml(recipe.sourceUrl)}" target="_blank" class="source-link">Original Source ↗</a>` : ''}
+                ${sourceHtml}
             </details>
         </div>
     `;
@@ -134,8 +180,12 @@ function viewAdd() {
               </select>
             </div>
             <div class="form-group">
-              <label>Preparation Time</label>
-              <input type="text" id="manual-time" placeholder="e.g., 45 mins">
+              <label>Total Time (minutes)</label>
+              <input type="number" id="manual-time" min="0" placeholder="e.g., 45">
+            </div>
+            <div class="form-group">
+              <label>Description / Notes (Optional)</label>
+              <textarea id="manual-description" rows="2" placeholder="A short summary or any notes about this recipe."></textarea>
             </div>
             <div class="form-group">
               <label>Ingredients (One item per line)</label>

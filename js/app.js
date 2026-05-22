@@ -428,10 +428,12 @@ function initAdd() {
         e.preventDefault();
         const ing = document.getElementById('manual-ingredients').value.split('\n').map(l => l.trim()).filter(Boolean);
         const inst = document.getElementById('manual-instructions').value.split('\n').map(l => l.trim()).filter(Boolean);
+        const timeVal = parseInt(document.getElementById('manual-time').value, 10);
         const recipe = {
             title: document.getElementById('manual-title').value.trim(),
             category: document.getElementById('manual-category').value,
-            prepTime: document.getElementById('manual-time').value.trim() || 'Unspecified',
+            totalTime: isNaN(timeVal) ? null : timeVal,
+            description: document.getElementById('manual-description').value.trim() || null,
             ingredients: ing,
             instructions: inst,
             sourceUrl: document.getElementById('manual-url').value.trim() || null,
@@ -639,7 +641,14 @@ function openEditModal(mode, recipe) {
             : 'If this recipe is also shared to the community and you own it, your edits sync there too.';
     document.getElementById('edit-title').value = recipe.title;
     document.getElementById('edit-category').value = recipe.category;
-    document.getElementById('edit-time').value = recipe.prepTime === 'Parsing...' ? '' : recipe.prepTime;
+    // Time: use totalTime, or pull a number out of a legacy prepTime string
+    let timeVal = recipe.totalTime;
+    if (timeVal == null && recipe.prepTime) {
+        const n = parseInt(String(recipe.prepTime).match(/\d+/), 10);
+        timeVal = isNaN(n) ? '' : n;
+    }
+    document.getElementById('edit-time').value = (timeVal == null ? '' : timeVal);
+    document.getElementById('edit-description').value = recipe.description || '';
     document.getElementById('edit-ingredients').value = (recipe.ingredients || []).join('\n');
     document.getElementById('edit-instructions').value = (recipe.instructions || []).join('\n');
     document.getElementById('edit-image').value = recipe.imageUrl || '';
@@ -657,10 +666,12 @@ async function handleEditSave(e) {
 
     const ing = document.getElementById('edit-ingredients').value.split('\n').map(l => l.trim()).filter(Boolean);
     const inst = document.getElementById('edit-instructions').value.split('\n').map(l => l.trim()).filter(Boolean);
+    const editTimeVal = parseInt(document.getElementById('edit-time').value, 10);
     const fields = {
         title: document.getElementById('edit-title').value.trim(),
         category: document.getElementById('edit-category').value,
-        prepTime: document.getElementById('edit-time').value.trim() || 'Unspecified',
+        totalTime: isNaN(editTimeVal) ? null : editTimeVal,
+        description: document.getElementById('edit-description').value.trim() || null,
         ingredients: ing,
         instructions: inst,
         imageUrl: document.getElementById('edit-image').value.trim() || null

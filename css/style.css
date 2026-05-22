@@ -776,3 +776,43 @@ html.theme-dark .action-menu-item.danger:hover {
 .password-toggle:hover {
   opacity: 1;
 }
+
+/* ==========================================================================
+   14. RECIPE CARD: TOTAL TIME, SOURCE SITE, DESCRIPTION
+   ========================================================================== */
+
+/* Total-time pill in the card header (sits after the category badge) */
+.card-time {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Push the action (⚙) menu to the far right of the header */
+.card-header .action-menu {
+  margin-left: auto;
+}
+
+/* Short description / notes under the title */
+.recipe-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  line-height: 1.45;
+}
+
+/* Source row: site name + original-source link */
+.source-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 12px;
+  font-size: 0.82rem;
+}
+
+.source-site {
+  color: var(--text-muted);
+  font-weight: 600;
+}
