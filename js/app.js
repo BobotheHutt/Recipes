@@ -344,7 +344,22 @@ async function initExplore() {
         } else if (target.classList.contains('save-action')) {
             closeAllMenus();
             try {
-                await addMyRecipe(recipe);
+                if (recipe.uploader === SESSION.username) {
+                    // It's the user's own community recipe — keep the same id
+                    // so the collection and community copies stay linked.
+                    await addMyRecipe(recipe);
+                } else {
+                    // Grabbing someone else's recipe: copy it as a brand-new
+                    // recipe of the user's own — fresh id, not shared, owned
+                    // by them — so they can rework it and share their version
+                    // separately without touching the community original.
+                    const copy = { ...recipe };
+                    delete copy.id;          // worker mints a new id
+                    delete copy.createdAt;   // worker stamps a new date
+                    copy.sharedToCommunity = false;
+                    copy.uploader = SESSION.username;
+                    await addMyRecipe(copy);
+                }
                 alert(`Added "${recipe.title}" to your collection!`);
             } catch (err) {
                 alert("Couldn't add to your collection: " + err.message);
